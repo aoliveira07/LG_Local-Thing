@@ -9,46 +9,295 @@ Para instalar o projeto em um novo cliente, use o manual completo:
 
 **[Baixar / abrir o Manual de Implantação LG_Local-Thing 1.0.0 (PDF)](docs/Manual_Implantacao_LG_Local-Thing_1.0.0_COMPLETO.pdf)**
 
-O manual contém o processo completo com capturas de tela:
+## Implantação passo a passo
 
-1. Instalação do **LG_Local-Thing** no Home Assistant OS pelo repositório GitHub.
-2. Instalação e configuração do **Mosquitto MQTT Broker**.
-3. Configuração do MQTT no LG_Local-Thing.
-4. Instalação e configuração do **AdGuard Home**.
-5. Criação das reescritas DNS:
-   - `common.lgthinq.com` → IP do Home Assistant
-   - `rethink.lgthinq.com` → IP do Home Assistant
-6. Configuração do DHCP/DNS no roteador do cliente.
-7. Preparação de um notebook Windows com **Git**, **Node.js** e dependências do ReThink.
-8. Provisionamento dos aparelhos LG pelo PowerShell.
-9. Validação final no ReThink, MQTT, Home Assistant e AdGuard.
+Siga a ordem abaixo. O provisionamento dos aparelhos acontece somente depois
+de MQTT e DNS estarem funcionando.
 
-### Instalação rápida do add-on
+1. Instalar o LG Local Thing.
+2. Instalar o Mosquitto e criar o usuário MQTT.
+3. Conectar o Home Assistant e o LG Local Thing ao MQTT.
+4. Instalar o AdGuard Home e criar as reescritas DNS.
+5. Configurar o DNS da LAN no roteador e testar.
+6. Preparar a ferramenta de provisionamento no Windows.
+7. Provisionar e conferir um aparelho por vez.
 
-No Home Assistant, abra a loja de aplicativos/complementos e adicione este repositório:
+Os nomes dos menus podem aparecer como **Aplicativos**, **Apps** ou
+**Complementos**, conforme a versão do Home Assistant.
+
+### 1. Instalar o LG Local Thing
+
+No Home Assistant, abra **Configurações → Aplicativos/Complementos → Loja**.
+No menu de repositórios, adicione:
 
 ```text
 https://github.com/aoliveira07/LG_Local-Thing
 ```
 
-Depois instale **LG Local Thing** e configure o MQTT.
+Instale **LG Local Thing**. Antes de iniciar o serviço, conclua as etapas
+de MQTT abaixo.
 
-### Provisionamento dos aparelhos LG
+### 2. Preparar o servidor MQTT e as credenciais
 
-No notebook Windows, com o repositório upstream preparado, o provisionamento é executado em PowerShell:
+MQTT é o canal de comunicação entre o LG Local Thing e o Home Assistant.
+O **Mosquitto broker** é o servidor que recebe e encaminha as mensagens.
+
+1. Na loja do Home Assistant, instale **Mosquitto broker**.
+2. Ative **Iniciar na inicialização**, inicie o Mosquitto e confira seus logs.
+3. Abra **Configurações → Pessoas → Usuários**. Se a aba não aparecer,
+   habilite o **Modo avançado** no seu perfil.
+4. Crie um usuário dedicado, por exemplo `lg_mqtt`, com uma senha própria.
+   Ele não precisa ser administrador. Guarde o nome de usuário e a senha:
+   eles serão usados na próxima etapa.
+5. Não use `homeassistant` nem `addons` como nome: são reservados.
+
+Para esse método, o usuário é criado no **Home Assistant**, não na lista
+`logins` do Mosquitto. O broker não aceita autenticação anônima.
+
+Referência: [documentação do Mosquitto para Home Assistant](https://github.com/home-assistant/addons/blob/master/mosquitto/DOCS.md).
+
+### 3. Configurar MQTT no Home Assistant e no LG Local Thing
+
+#### 3.1. Integração MQTT do Home Assistant
+
+Abra **Configurações → Dispositivos e serviços** e configure a integração
+**MQTT** descoberta. Se ela não aparecer, use **Adicionar integração → MQTT**.
+
+Na configuração manual com o Mosquitto instalado no mesmo Home Assistant,
+use o broker `core-mosquitto`, porta `1883` e o usuário e a senha criados
+acima. Se a integração descoberta já preencher os dados internos, mantenha-os.
+Conclua a configuração com a descoberta MQTT habilitada.
+
+#### 3.2. Opções do LG Local Thing
+
+Abra **LG Local Thing → Configuração** e preencha estes campos na interface:
+
+| Campo | Valor / orientação |
+|---|---|
+| `hostname` | Manter `rethink.lgthinq.com` |
+| `mqtt_url` | `mqtt://localhost:1883`, quando o Mosquitto estiver no mesmo HA e sua porta 1883 estiver publicada |
+| `mqtt_user` | O nome do usuário criado, por exemplo `lg_mqtt` |
+| `mqtt_pass` | A senha desse usuário |
+| `discovery_prefix` | Manter `homeassistant` |
+| `rethink_prefix` | Manter `rethink` |
+
+O LG Local Thing usa rede do host nesta distribuição. Se o broker estiver em
+outra máquina, use `mqtt://IP_DO_BROKER:1883`, substituindo
+`IP_DO_BROKER` pelo endereço real. Não copie esse marcador literalmente.
+
+Salve, inicie o LG Local Thing e habilite a inicialização automática.
+Se já estava iniciado, reinicie-o depois de salvar.
+
+**Antes de avançar:** procure `HA mqtt connection established` nos logs
+do LG Local Thing. Se houver falha de autenticação, confira usuário e senha.
+Se houver recusa de conexão, confira se o Mosquitto está iniciado, seu endereço
+e a porta publicada.
+
+Não use as portas `1885` ou `8885` como porta do Mosquitto:
+elas pertencem à comunicação dos aparelhos com o LG Local Thing.
+
+### 4. Instalar e configurar o AdGuard Home
+
+O AdGuard Home fornecerá o DNS local: ao consultar os nomes da LG, os
+aparelhos serão direcionados para o servidor desta instalação.
+
+1. Antes de instalar, configure IP estático e DNS externo no próprio
+   Home Assistant, em **Configurações → Sistema → Rede**. Anote o IP do HA,
+   a máscara e o gateway corretos da rede.
+2. Instale **AdGuard Home** pela loja, ative a inicialização automática,
+   inicie e confira os logs. Abra **Interface Web**.
+3. Em **Filtros → Reescritas DNS** (*DNS rewrites*), adicione:
+
+| Domínio | Endereço de resposta |
+|---|---|
+| `common.lgthinq.com` | IP do Home Assistant que executa o LG Local Thing |
+| `rethink.lgthinq.com` | O mesmo IP |
+
+Use o IP real da instalação. Não use o endereço temporário do aparelho.
+Mantenha TTL não zero. Confirme que o serviço DNS atende na porta 53.
+
+O add-on AdGuard recomenda IP estático configurado no HA; somente uma
+reserva DHCP no roteador não substitui essa configuração.
+
+Referências: [AdGuard Home no HA](https://github.com/hassio-addons/addon-adguard-home/blob/main/adguard/DOCS.md)
+e [redirecionamento no ReThink](https://github.com/anszom/rethink/wiki/Installing-rethink%E2%80%90cloud).
+
+### 5. Configurar LAN / DHCP / DNS no roteador
+
+**Criar as reescritas no AdGuard não basta.** Os aparelhos precisam consultar
+esse servidor DNS. O roteador normalmente informa qual DNS usar quando
+entrega um endereço IP por DHCP.
+
+Abra a administração do roteador e procure **LAN → DHCP Server → DNS**,
+ou o menu equivalente do fabricante. O campo relevante é o DNS entregue
+aos clientes da LAN. Alterar somente o DNS da conexão WAN pode não produzir
+esse resultado.
+
+#### Tela de referência — esquema, não captura de um roteador
+
+| LAN / Servidor DHCP | Como configurar |
+|---|---|
+| Servidor DHCP | Manter o servidor já responsável pela rede |
+| Gateway / roteador | Manter o endereço do roteador |
+| DNS primário entregue aos clientes | IP do HA onde o AdGuard está atendendo |
+| DNS secundário | Deixar vazio se permitido; se obrigatório, usar outro DNS local com as mesmas reescritas |
+| Aplicar / Salvar | Salvar e renovar a conexão dos clientes |
+
+Não use um DNS público como secundário nessa rede: alguns clientes podem
+consultá-lo e ignorar as reescritas locais. Não habilite um segundo servidor
+DHCP no AdGuard enquanto o roteador continuar fornecendo DHCP.
+
+```mermaid
+flowchart LR
+    A[Aparelho LG] -->|Recebe IP e DNS por DHCP| R[Roteador LAN]
+    A -->|Consulta nomes LG| D[AdGuard Home]
+    D -->|Responde com IP do HA| A
+    A -->|Conecta ao servidor local| L[LG Local Thing]
+    L --> M[Mosquitto]
+    M --> H[Home Assistant]
+```
+
+Depois de salvar, reconecte o notebook ao Wi-Fi da instalação. Se a rede
+também anunciar DNS por IPv6, confira se ele não contorna o AdGuard.
+
+#### Testar antes de provisionar
+
+No PowerShell, ainda conectado à rede normal da instalação:
+
+```powershell
+$HA_IP = Read-Host "Digite o IP do Home Assistant / AdGuard"
+
+# Testa diretamente as reescritas do AdGuard
+nslookup common.lgthinq.com $HA_IP
+nslookup rethink.lgthinq.com $HA_IP
+
+# Testa o DNS que o notebook recebeu da rede
+ipconfig /all
+nslookup common.lgthinq.com
+nslookup rethink.lgthinq.com
+```
+
+**Resultado esperado:** as duas consultas retornam o IP do HA.
+Se a consulta direta funcionar e a consulta normal falhar, revise o DNS
+distribuído pelo DHCP. Confira também o **Registro de consultas** do AdGuard.
+
+Se o roteador não permitir configurar DNS da LAN, identifique seu modelo
+antes de prosseguir; a alternativa depende da rede.
+
+### 6. Preparar a ferramenta no notebook Windows
+
+Faça esta etapa conectado à internet, **antes** de entrar no Wi-Fi temporário
+do aparelho.
+
+Instale [Git para Windows](https://git-scm.com/download/win) e
+[Node.js](https://nodejs.org/en/download), incluindo npm. Feche e abra o
+PowerShell após a instalação.
+
+Verifique:
+
+```powershell
+git --version
+node --version
+npm.cmd --version
+```
+
+Prepare uma cópia exclusiva do upstream no commit congelado:
+
+```powershell
+$ProvisionRoot = Join-Path $env:USERPROFILE "SmartHouse"
+New-Item -ItemType Directory -Force -Path $ProvisionRoot | Out-Null
+Set-Location $ProvisionRoot
+
+# Execute o clone somente se esta pasta ainda nao existir.
+git clone https://github.com/anszom/rethink.git rethink
+Set-Location .\rethink
+
+git checkout --detach 8f6d19ec9939f5f785bb1def3810540730e31bce
+git rev-parse HEAD
+
+npm.cmd ci
+npx.cmd --no-install tsx --version
+```
+
+O hash exibido deve ser `8f6d19ec9939f5f785bb1def3810540730e31bce`.
+Se um comando falhar, resolva antes de avançar. Se a pasta já existir,
+confira seu conteúdo e entre nela; não a apague nem descarte alterações.
+
+A ferramenta usada é o `rethink-setup.ts` original. Não é necessário iniciar
+outro servidor ReThink no notebook: o servidor já está no HA.
+O teste do `tsx` confirma que o executável está instalado antes de perder
+o acesso à internet ao conectar ao aparelho.
+
+### 7. Provisionar cada aparelho, um por vez
+
+Para cada aparelho:
+
+1. Ative o modo de configuração Wi-Fi seguindo o manual do modelo.
+   A combinação de botões e a senha do ponto de acesso variam por modelo.
+2. Conecte o notebook ao Wi-Fi temporário desse aparelho. É normal essa
+   rede não ter internet.
+3. Execute o bloco abaixo no PowerShell. Informe o SSID e a senha da
+   **rede de destino da instalação**, não os dados do Wi-Fi temporário.
+   Use a faixa e o tipo de segurança suportados pelo modelo.
+4. Aguarde o término. Reconecte o notebook à rede da instalação e confira
+   o aparelho no painel do LG Local Thing e na integração MQTT do HA.
+5. Somente então passe ao próximo aparelho.
+
+#### Comando a executar novamente para cada equipamento
 
 ```powershell
 Set-Location "$env:USERPROFILE\SmartHouse\rethink"
 
-$WIFI_SSID = Read-Host "Digite o nome da rede Wi-Fi"
-$PASS = Read-Host "Digite a senha do Wi-Fi"
+$WIFI_SSID = Read-Host "SSID da rede da instalacao"
+$WifiSecret = Read-Host "Senha dessa rede Wi-Fi" -AsSecureString
+$WifiPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($WifiSecret)
 
-npx.cmd tsx .\rethink-setup.ts 192.168.120.254 "$WIFI_SSID" "$PASS"
+try {
+    $WIFI_PASS = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($WifiPointer)
+    npx.cmd --no-install tsx .\rethink-setup.ts 192.168.120.254 "$WIFI_SSID" "$WIFI_PASS"
+}
+finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($WifiPointer)
+    Remove-Variable WIFI_PASS, WifiSecret, WifiPointer -ErrorAction SilentlyContinue
+}
 ```
 
-O endereço `192.168.120.254` é o endereço padrão usado pelo aparelho LG durante o provisionamento. Diagnostique outro IP somente se o procedimento apresentar erro de conexão.
+O endereço `192.168.120.254` é o endereço usual do **aparelho no modo
+de provisionamento**, não o IP do HA. Se não houver conexão, confira se
+o notebook está no Wi-Fi do aparelho e se o modelo usa esse endereço.
 
-> **Importante:** não publique senhas Wi-Fi, credenciais MQTT, tokens, chaves privadas, certificados privados ou dados específicos de clientes no repositório.
+| Ciclo | Procedimento |
+|---|---|
+| Primeiro aparelho | Conectar ao Wi-Fi dele, executar o bloco, validar |
+| Segundo aparelho | Ativar o modo Wi-Fi dele, trocar a rede do notebook, repetir o bloco, validar |
+| Demais aparelhos | Repetir o mesmo ciclo individualmente |
+
+O comando não recebe modelo nem nome de cômodo. Não existem comandos
+diferentes por ar-condicionado, lavadora ou outro tipo nessa ferramenta.
+A compatibilidade e a ativação do modo Wi-Fi devem ser verificadas para
+cada modelo no [upstream congelado](https://github.com/anszom/rethink/tree/8f6d19ec9939f5f785bb1def3810540730e31bce).
+
+A entrada de senha fica oculta, mas a ferramenta original recebe a senha como
+argumento do processo. Execute apenas no notebook autorizado e não compartilhe
+logs de provisionamento sem revisar dados sensíveis.
+
+### 8. Conferir a implantação
+
+- Mosquitto iniciado e integração MQTT configurada.
+- LG Local Thing conectado ao broker.
+- Nomes LG resolvidos para o IP do HA pelo DNS da rede.
+- Aparelho visível no painel após o provisionamento.
+- Dispositivo e entidades esperados disponíveis no MQTT do Home Assistant.
+- Comando enviado pelo HA e estado de retorno conferidos no aparelho.
+- Cada aparelho identificado individualmente antes de provisionar o próximo.
+
+## Fontes do procedimento
+
+- [Mosquitto broker — documentação oficial do add-on](https://github.com/home-assistant/addons/blob/master/mosquitto/DOCS.md).
+- [AdGuard Home — documentação do add-on](https://github.com/hassio-addons/addon-adguard-home/blob/main/adguard/DOCS.md).
+- [AdGuard Home — configuração de clientes e roteador](https://adguard-dns.io/kb/adguard-home/getting-started/).
+- [ReThink — instalação e DNS](https://github.com/anszom/rethink/wiki/Installing-rethink%E2%80%90cloud).
+- [Ferramenta de provisionamento no commit congelado](https://github.com/anszom/rethink/blob/8f6d19ec9939f5f785bb1def3810540730e31bce/rethink-setup.ts).
 
 ## Versão 1.0.0
 
