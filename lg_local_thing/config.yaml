@@ -1,0 +1,57 @@
+name: "LG Local Thing"
+
+description: >
+  Fully local replacement for LG's ThinQ cloud. Smart House local build
+  with persistent friendly names, stable Home Assistant entity IDs,
+  configurable MQTT and frozen upstream source.
+
+version: "1.0.0"
+
+slug: lg_local_thing
+
+url: "https://github.com/aoliveira07/LG_Local-Thing"
+
+arch:
+  - aarch64
+  - amd64
+
+host_network: true
+
+init: false
+
+map:
+  - data:rw
+
+options:
+  hostname: "rethink.lgthinq.com"
+  mqtt_url: "mqtt://localhost:1883"
+  mqtt_user: ""
+  mqtt_pass: ""
+  discovery_prefix: "homeassistant"
+  rethink_prefix: "rethink"
+
+schema:
+  hostname: str
+  mqtt_url: str
+  mqtt_user: str
+  mqtt_pass: password
+  discovery_prefix: str
+  rethink_prefix: str
+
+ingress: true
+
+ingress_port: 44401
+
+ports:
+  443/tcp: 443
+  8885/tcp: 8885
+  1885/tcp: 1885
+  46030/tcp: 46030
+  47878/tcp: 47878
+
+ports_description:
+  443/tcp: "ThinQ2 HTTPS"
+  8885/tcp: "MQTTS - LG devices"
+  1885/tcp: "MQTT plain - LG devices"
+  46030/tcp: "ThinQ1 HTTPS"
+  47878/tcp: "ThinQ1 TCP"

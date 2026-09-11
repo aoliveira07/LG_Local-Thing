@@ -1,0 +1,29 @@
+# Chaves e certificados
+*.key
+*.pem
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# Pacotes e backups
+*.tar
+*.tar.gz
+*.zip
+
+# Credenciais e segredos
+.env
+.env.*
+credentials*
+secrets*
+
+# Dados de execução
+options.json
+config.json
+friendly-names.json
+state/
+backup/
+backups/
+
+# Metadados do sistema
+.DS_Store
