@@ -3,11 +3,59 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
+## 📘 Manual de implantação
+
+Para instalar o projeto em um novo cliente, use o manual completo:
+
+**[Baixar / abrir o Manual de Implantação LG_Local-Thing 1.0.0 (PDF)](docs/Manual_Implantacao_LG_Local-Thing_1.0.0_COMPLETO.pdf)**
+
+O manual contém o processo completo com capturas de tela:
+
+1. Instalação do **LG_Local-Thing** no Home Assistant OS pelo repositório GitHub.
+2. Instalação e configuração do **Mosquitto MQTT Broker**.
+3. Configuração do MQTT no LG_Local-Thing.
+4. Instalação e configuração do **AdGuard Home**.
+5. Criação das reescritas DNS:
+   - `common.lgthinq.com` → IP do Home Assistant
+   - `rethink.lgthinq.com` → IP do Home Assistant
+6. Configuração do DHCP/DNS no roteador do cliente.
+7. Preparação de um notebook Windows com **Git**, **Node.js** e dependências do ReThink.
+8. Provisionamento dos aparelhos LG pelo PowerShell.
+9. Validação final no ReThink, MQTT, Home Assistant e AdGuard.
+
+### Instalação rápida do add-on
+
+No Home Assistant, abra a loja de aplicativos/complementos e adicione este repositório:
+
+```text
+https://github.com/aoliveira07/LG_Local-Thing
+```
+
+Depois instale **LG Local Thing** e configure o MQTT.
+
+### Provisionamento dos aparelhos LG
+
+No notebook Windows, com o repositório upstream preparado, o provisionamento é executado em PowerShell:
+
+```powershell
+Set-Location "$env:USERPROFILE\SmartHouse\rethink"
+
+$WIFI_SSID = Read-Host "Digite o nome da rede Wi-Fi"
+$PASS = Read-Host "Digite a senha do Wi-Fi"
+
+npx.cmd tsx .\rethink-setup.ts 192.168.120.254 "$WIFI_SSID" "$PASS"
+```
+
+O endereço `192.168.120.254` é o endereço padrão usado pelo aparelho LG durante o provisionamento. Diagnostique outro IP somente se o procedimento apresentar erro de conexão.
+
+> **Importante:** não publique senhas Wi-Fi, credenciais MQTT, tokens, chaves privadas, certificados privados ou dados específicos de clientes no repositório.
+
 ## Versão 1.0.0
 
-A **1.0.0 é a primeira versão pública do LG_Local-Thing**. Sua publicação
-está em preparação. A base funcional foi homologada originalmente como
-build interna **1.0.8-local.3** e exportada da instalação Home Assistant.
+A **1.0.0 é a primeira versão pública do LG_Local-Thing**. A base funcional foi
+homologada originalmente como build interna **1.0.8-local.3**, exportada da
+instalação Home Assistant e posteriormente validada em uma segunda instalação
+Home Assistant OS com MQTT, AdGuard Home, DNS local e múltiplos aparelhos LG.
 
 Os seis arquivos funcionais preservados foram conferidos por SHA256 contra
 os valores fornecidos na homologação, sem alteração de conteúdo.
@@ -35,8 +83,7 @@ Para esta distribuição pública:
   byte a byte.
 
 As opções funcionais, portas, MQTT, hostname e demais configurações
-originais foram mantidos. Não foi realizada nova homologação funcional
-durante esta preparação documental.
+originais foram mantidos.
 
 ## Estrutura
 
@@ -45,6 +92,7 @@ durante esta preparação documental.
 - `lg_local_thing/Dockerfile`: construção com o commit upstream congelado.
 - `lg_local_thing/run.sh`: inicialização homologada.
 - `lg_local_thing/overrides/`: quatro arquivos homologados de customização.
+- `docs/`: documentação de implantação.
 - `CHANGELOG.md`: histórico da distribuição pública.
 - `COPYING`: licença GNU GPL v2 integral do upstream.
 - `.gitignore`: exclusões de segredos, dados de execução e backups.
