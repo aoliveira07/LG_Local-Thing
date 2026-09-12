@@ -133,19 +133,41 @@ ou o menu equivalente do fabricante. O campo relevante é o DNS entregue
 aos clientes da LAN. Alterar somente o DNS da conexão WAN pode não produzir
 esse resultado.
 
-#### Tela de referência — esquema, não captura de um roteador
+#### UniFi Controller / UniFi Network
 
-| LAN / Servidor DHCP | Como configurar |
-|---|---|
-| Servidor DHCP | Manter o servidor já responsável pela rede |
-| Gateway / roteador | Manter o endereço do roteador |
-| DNS primário entregue aos clientes | IP do HA onde o AdGuard está atendendo |
-| DNS secundário | Deixar vazio se permitido; se obrigatório, usar outro DNS local com as mesmas reescritas |
-| Aplicar / Salvar | Salvar e renovar a conexão dos clientes |
+No UniFi Network, abra **Settings → Networks → selecione a rede dos
+aparelhos LG → DHCP Service Management → DNS Server**. Os nomes e a
+posição dos campos variam conforme a versão.
 
-Não use um DNS público como secundário nessa rede: alguns clientes podem
-consultá-lo e ignorar as reescritas locais. Não habilite um segundo servidor
-DHCP no AdGuard enquanto o roteador continuar fornecendo DHCP.
+![UniFi Controller: Auto DNS Server desmarcado e campo IPv4 Address para o DNS](docs/images/unifi-lan-dns.png)
+
+A captura acima mostra a seção usada nesta implantação. **Auto DNS Server**
+já está desmarcado, mas ainda falta preencher o endereço do DNS.
+
+1. Mantenha **Auto Default Gateway** na configuração atual. Esse campo
+   não é o DNS.
+2. Desmarque **Auto DNS Server**.
+3. Em **IPv4 Address**, digite o IP fixo do Home Assistant onde o
+   AdGuard Home está atendendo.
+4. Clique em **Add** e confirme que o endereço entrou na lista.
+5. Salve/aplique as alterações da rede.
+6. Reconecte o notebook e renove a conexão dos aparelhos para receberem
+   a configuração DHCP atualizada. Execute os testes abaixo.
+
+**Não copie o DHCP Range Start/Stop da captura.** Preserve a faixa de
+endereços planejada para a instalação; o IP estático do HA deve estar
+protegido contra atribuição a outro cliente.
+
+Não adicione DNS público à lista: os clientes podem usá-lo e ignorar as
+reescritas do AdGuard. Para redundância, outro servidor DNS local precisa
+ter as mesmas reescritas.
+
+Se os aparelhos usam uma VLAN/SSID IoT, configure a rede correspondente
+e permita o acesso dela ao AdGuard na porta 53 (UDP/TCP), além das portas
+do LG Local Thing. Se o UniFi gerencia somente os access points e o DHCP
+é fornecido por outro roteador, ajuste o DNS nesse roteador.
+
+Referência: [Ubiquiti — DNS da rede via DHCP](https://help.ui.com/hc/en-us/articles/15179064940439-UniFi-DNS-Records-and-Local-Hostnames).
 
 ```mermaid
 flowchart LR
