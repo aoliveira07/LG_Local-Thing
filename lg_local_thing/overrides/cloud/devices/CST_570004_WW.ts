@@ -78,6 +78,20 @@ export default class Device extends RAC {
         if (prop === 'climate-swing_mode' && !component?.swing_modes?.includes(value)) return
         if (prop === 'climate-swing_horizontal_mode' && !component?.swing_horizontal_modes?.includes(value)) return
         if (Array.isArray(field.write_attach) && field.write_attach.some(id => this.raw_clip_state[id] === undefined)) return
+        if (prop === 'climate-power') {
+            // Power-only ON was physically confirmed on AMNW24GTBA0 on 2026-09-15.
+            this.raw_clip_state[0x1f7] = value === 'ON' ? 1 : 0
+            this.send([1, 1, 2, 1, 1], [{t: 0x1f7, v: this.raw_clip_state[0x1f7]}])
+            return
+        }
+        const needsPowerOn = prop === 'climate-mode' && value !== 'off' && this.getPowerTLV() === 0
+        const modeCodes: Record<string, number> = {cool: 0, dry: 1, fan_only: 2, heat: 4, auto: 6}
+        if (needsPowerOn && this.getModeTLV() === modeCodes[value]) {
+            this.setProperty('climate-power', 'ON')
+            return
+        }
         super.setProperty(prop, value)
+        // A mode write alone does not turn this CST on, unlike the original RAC assumption.
+        if (needsPowerOn) this.setProperty('climate-power', 'ON')
     }
 }

@@ -58,3 +58,22 @@ test('optional controls require advertised capabilities; late capabilities keep 
  const count=thinq.outbox.length;dev.setProperty('sleeptimer-','NaN');dev.setProperty('starttimer-','25');dev.setProperty('jet-','invalid');assert.equal(thinq.outbox.length,count)
  }finally{dev.drop()}
 })
+
+test('HA mode from off uses the physically validated power-only command',()=>{
+ const {dev,ha,thinq}=setup();try{
+ const off=Buffer.from('000004000000a70204000c7dc07e407f90287e887f5028f166','hex')
+ thinq.emit('data',off);thinq.outbox=[]
+ dev.setProperty('climate-mode','cool')
+ assert.deepEqual(thinq.outbox.map(b=>b.toString('hex')),['01010400000065020101027dc11557'])
+ assert.equal(ha.properties['climate-mode'],'off') // wait for device confirmation
+ thinq.emit('data',Buffer.from('000004000000a70204000c7dc17e407f902c7e887f502c6f0a','hex'))
+ assert.equal(ha.properties['climate-mode'],'cool')
+ thinq.emit('data',off);thinq.outbox=[]
+ dev.setProperty('climate-mode','heat')
+ assert.equal(thinq.outbox.length,2)
+ assert.equal(new Map(parse(thinq.outbox[0].subarray(11,-2)).map(x=>[x.t,x.v])).get(0x1f9),4)
+ assert.equal(thinq.outbox[1].toString('hex'),'01010400000065020101027dc11557')
+ thinq.outbox=[];dev.setProperty('climate-mode','off')
+ assert.deepEqual(thinq.outbox.map(b=>b.toString('hex')),['01010400000065020101027dc00576'])
+ }finally{dev.drop()}
+})

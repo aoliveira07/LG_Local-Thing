@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 — Correção de ligar pelo Home Assistant
+
+- CST: liga com o pacote dedicado de alimentação, validado fisicamente no AMNW24GTBA0.
+- Ao sair de desligado para o mesmo modo salvo, envia apenas o comando de ligar.
+- Ao escolher outro modo, envia a configuração de modo seguida do comando explícito de ligar.
+- Estado mostrado continua dependendo do retorno do aparelho.
+- Build e 10 testes CST/nomes/cômodos passaram; outros modos e extras permanecem experimentais.
+
 ## 1.2.0 — Suporte experimental CST_570004_WW
 
 - Driver específico para AMNW24GTBA0 baseado no RAC_056905_WW, mantendo os demais modelos.

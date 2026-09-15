@@ -3,7 +3,12 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
-## Versão 1.2.0 — suporte experimental AMNW24GTBA0
+## Versão 1.2.1 — suporte experimental AMNW24GTBA0
+
+A 1.2.1 corrige o acionamento pelo HA com o comando dedicado de ligar,
+confirmado fisicamente pelo usuário. Ao mudar de desligado para um modo ativo,
+o driver envia explicitamente esse comando; a confirmação visual aguarda o
+estado devolvido pelo aparelho. Outros modos e recursos extras seguem experimentais.
 
 O modelo `CST_570004_WW` agora possui um driver próprio baseado no RAC do
 ReThink. A ventilação oferece **1, 2, 4, 6 e auto**, conforme as capturas com
@@ -12,7 +17,7 @@ o controle AKB75735404 / PWLSSB21H. Os demais modelos mantêm seus drivers.
 Inclui comandos de ligar/desligar, temperatura (18–30 °C, faixa herdada do RAC)
 e modos refrigerar, desumidificar, ventilar, aquecer e automático. Somente a
 leitura em refrigeração, liga/desliga, ajustes de 20/22 °C e as velocidades
-informadas foi verificada nas capturas reais. Faixa, demais modos e todos os
+informadas foi verificada nas capturas reais. Faixa, demais modos e os demais
 comandos enviados pelo HA ainda precisam de validação no equipamento.
 
 Swing vertical/horizontal, Jet, purificação, economia e temporizadores usam
@@ -54,7 +59,7 @@ Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
   novamente depois. Renomear sem escolher um cômodo mantém a associação atual.
 
 Para atualizar, procure atualizações na loja de aplicativos/complementos,
-abra **LG Local Thing** e instale **1.2.0**. Aguarde a construção e inicialização,
+abra **LG Local Thing** e instale **1.2.1**. Aguarde a construção e inicialização,
 então reabra a Interface Web. Os dados em `/data/` são mantidos; não desinstale
 o add-on para atualizar. Esta versão habilita `homeassistant_api` para gerenciar
 áreas usando a autorização interna do Supervisor, sem pedir token ao usuário.
