@@ -1,9 +1,13 @@
+// LG Local Thing: room persistence and atomic updates, 2026-09-14. GPL v2.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 export type FriendlyIdentity = {
     name: string
     entityBase: string
+    room?: string
+    areaId?: string | null
+    areaPending?: boolean
 }
 
 type FriendlyNameDatabase = Record<string, FriendlyIdentity>
@@ -35,7 +39,7 @@ export class FriendlyNameStore {
             if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
                 throw new Error(`Invalid friendly-name database: ${this.filePath}`)
 
-            const database: FriendlyNameDatabase = {}
+            const database: FriendlyNameDatabase = Object.create(null)
 
             for (const [id, rawIdentity] of Object.entries(parsed as Record<string, unknown>)) {
                 if (!rawIdentity || typeof rawIdentity !== 'object' || Array.isArray(rawIdentity))
@@ -49,19 +53,22 @@ export class FriendlyNameStore {
                 database[id] = {
                     name: identity.name,
                     entityBase: identity.entityBase,
+                    ...(typeof identity.room === "string" ? { room: identity.room } : {}),
+                    ...(identity.areaId === null || typeof identity.areaId === "string" ? { areaId: identity.areaId } : {}),
+                    ...(typeof identity.areaPending === "boolean" ? { areaPending: identity.areaPending } : {}),
                 }
             }
 
             this.database = database
         } catch (err: any) {
             if (err?.code === 'ENOENT') {
-                this.database = {}
+                this.database = Object.create(null)
             } else {
                 throw err
             }
         }
 
-        return this.database
+        return this.database!
     }
 
     get(id: string): FriendlyIdentity | undefined {
@@ -69,7 +76,7 @@ export class FriendlyNameStore {
         return identity ? { ...identity } : undefined
     }
 
-    set(id: string, value: string): FriendlyIdentity {
+    set(id: string, value: string, area?: { room: string; areaId: string | null }): FriendlyIdentity {
         const name = value.trim()
 
         if (!name) throw new Error('Device name cannot be empty')
@@ -102,12 +109,24 @@ export class FriendlyNameStore {
                 )
         }
 
-        const identity = { name, entityBase }
-        database[id] = identity
-
-        this.persist(database)
+        const identity: FriendlyIdentity = { ...current, name, entityBase, ...(area ? { ...area, areaPending: true } : {}) }
+        const next = { ...database, [id]: identity }
+        this.persist(next)
+        this.database = next
 
         return { ...identity }
+    }
+
+    pending(): Array<[string, FriendlyIdentity]> {
+        return Object.entries(this.load()).filter(([, value]) => value.areaPending).map(([id, value]) => [id, { ...value }])
+    }
+
+    markAreaSynced(id: string, areaId: string | null) {
+        const current = this.get(id)
+        if (!current || current.areaId !== areaId) return
+        const next = { ...this.load(), [id]: { ...current, areaPending: false } }
+        this.persist(next)
+        this.database = next
     }
 
     private persist(database: FriendlyNameDatabase) {

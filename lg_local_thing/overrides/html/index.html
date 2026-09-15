@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- LG Local Thing / Smart House, 2026-09-14. Derived from ReThink, GPL v2. -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>LG Local Thing</title>
+  <link rel="icon" href="lg-icon.png">
+  <link rel="stylesheet" href="local-thing.css">
+  <script src="panel.js" defer></script>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="brand"><img src="lg-icon.png" width="60" height="60" alt="LG"><div><h1>LG Local Thing</h1><p>Smart House · Integração local</p></div></div>
+    <span class="version">v1.1.0</span>
+  </header>
+  <section class="services" aria-label="Conexões">
+    <div class="service"><span class="service-icon" aria-hidden="true">▤</span><div><h2>Servidor local</h2><span id="server-status" class="badge">Conectando…</span></div></div>
+    <div class="service"><span class="service-icon" aria-hidden="true">⌂</span><div><h2>Home Assistant MQTT</h2><span id="mqtt-status" class="badge">Aguardando</span></div></div>
+    <div class="service"><span class="service-icon" aria-hidden="true">◇</span><div><h2>Bridge</h2><span id="bridge-status" class="badge">Desativado</span></div></div>
+  </section>
+  <p id="connection-notice" class="notice" role="status">Conectando ao servidor local…</p>
+  <div class="section-title"><h2>Aparelhos</h2><span id="device-count">Aguardando conexão</span></div>
+  <p id="setup-notice" class="notice" hidden></p>
+  <section id="devices" aria-label="Lista de aparelhos"></section>
+  <div id="empty-state" class="empty" hidden><h3>Nenhum aparelho conectado</h3><p>Provisione um aparelho LG na rede local. Quando ele aparecer aqui, escolha o nome e o cômodo para adicioná-lo ao Home Assistant.</p><a href="https://github.com/aoliveira07/LG_Local-Thing#7-provisionar-cada-aparelho-um-por-vez" target="_blank" rel="noopener noreferrer">Abrir guia de provisionamento ↗</a></div>
+  <details class="advanced"><summary>Opções avançadas</summary><p>Bridge é a conexão opcional com a nuvem LG. O funcionamento local não exige login na LG.</p><div class="actions"><button id="bridge-login" class="secondary" hidden>Entrar na conta LG</button><button id="bridge-logout" class="secondary" hidden>Sair da conta LG</button></div></details>
+  <footer><span>LG Local Thing · Base ReThink</span><span>Smart House</span></footer>
+</main>
+<dialog id="identity-dialog" aria-labelledby="identity-title">
+  <form id="identity-form">
+    <div class="dialog-heading"><h2 id="identity-title">Configurar aparelho</h2><button type="button" class="icon-button" id="identity-close" aria-label="Fechar">×</button></div>
+    <p id="identity-description"></p>
+    <label for="device-name">Nome do aparelho</label><input id="device-name" maxlength="80" required placeholder="Ex.: Ar-condicionado Sala" autocomplete="off">
+    <label for="device-area">Cômodo no Home Assistant</label><select id="device-area"><option value="keep">Carregando cômodos…</option></select>
+    <div id="new-area-field" hidden><label for="new-area-name">Nome do novo cômodo</label><input id="new-area-name" maxlength="80" placeholder="Ex.: Sala" autocomplete="off"></div>
+    <p id="area-help" class="help">Selecione um cômodo existente ou crie um novo.</p>
+    <button id="reload-areas" type="button" class="text-button" hidden>Tentar carregar cômodos novamente</button>
+    <p id="identity-error" class="form-error" role="alert" hidden></p>
+    <div class="dialog-actions"><button id="identity-cancel" type="button" class="secondary">Cancelar</button><button id="identity-save" type="submit">Salvar e adicionar ao HA</button></div>
+  </form>
+</dialog>
+<dialog id="login-dialog" aria-labelledby="login-title"><form id="login-form"><h2 id="login-title">Conta LG ThinQ</h2><p>Abra o login da LG e depois cole a URL final recebida.</p><label for="country-code">Código do país</label><input id="country-code" maxlength="2" minlength="2" pattern="[A-Za-z]{2}" value="BR" required><button id="open-lg-login" type="button" class="secondary">Abrir login LG ↗</button><label for="login-url">URL final do login</label><input id="login-url" type="url" required><p id="login-error" class="form-error" hidden></p><div class="dialog-actions"><button id="login-cancel" type="button" class="secondary">Cancelar</button><button type="submit">Concluir login</button></div></form></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

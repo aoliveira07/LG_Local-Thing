@@ -13,11 +13,12 @@ RUN git clone https://github.com/anszom/rethink /app && \
     test "$(git rev-parse HEAD)" = "${RETHINK_COMMIT}"
 
 # Smart House local customizations.
-# These files were validated independently and inside node:20-alpine.
+# Version 1.1.0 adds UI and room management to the original 1.0.0 base.
 COPY overrides/cloud/homeassistant.ts /app/cloud/homeassistant.ts
 COPY overrides/management/index.ts /app/management/index.ts
-COPY overrides/html/panel.js /app/html/panel.js
+COPY overrides/html/ /app/html/
 COPY overrides/util/friendly-names.ts /app/util/friendly-names.ts
+COPY overrides/util/ha-areas.ts /app/util/ha-areas.ts
 
 RUN cd /app && \
     npm ci && \

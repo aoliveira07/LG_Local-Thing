@@ -3,6 +3,38 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
+## Versão 1.1.0 — painel e cômodos
+
+Atualização disponível para teste em instalação real. Inclui o painel escuro
+Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
+
+- **Primeiro cadastro:** o aparelho aparece como “Novo aparelho LG”. Clique em
+  **Configurar aparelho**, informe o nome e escolha um cômodo existente ou
+  **Criar novo cômodo**. Também é possível deixar o cômodo para depois.
+- **Depois do cadastro:** use **Renomear / cômodo**. Alterar o nome preserva
+  os identificadores das entidades já criadas e as automações que os utilizam.
+- O cômodo é uma área real do Home Assistant. O add-on associa o dispositivo
+  MQTT a essa área; entidades sem área própria herdam a área do dispositivo.
+  Uma área definida individualmente em uma entidade não é sobrescrita.
+- Abra **Interface Web pelo Home Assistant** para usar os cômodos. O acesso
+  direto pela porta da LAN não autoriza operações no registro do HA.
+- A associação aguarda o dispositivo aparecer no MQTT Discovery. Enquanto
+  isso, o painel mostra a pendência e o serviço tenta novamente a cada 30 s.
+  Se persistir, confira a integração MQTT e a compatibilidade do modelo.
+- Se os cômodos não carregarem, é possível salvar somente o nome e tentar
+  novamente depois. Renomear sem escolher um cômodo mantém a associação atual.
+
+Para atualizar, procure atualizações na loja de aplicativos/complementos,
+abra **LG Local Thing** e instale **1.1.0**. Aguarde a construção e inicialização,
+então reabra a Interface Web. Os dados em `/data/` são mantidos; não desinstale
+o add-on para atualizar. Esta versão habilita `homeassistant_api` para gerenciar
+áreas usando a autorização interna do Supervisor, sem pedir token ao usuário.
+
+A compilação e os testes específicos de nomes/cômodos passaram. O build Docker
+e o comportamento com HA/aparelhos reais precisam ser conferidos na instalação.
+Veja [validação da 1.1.0](docs/TESTING-1.1.0.md). O PDF abaixo documenta a
+implantação da 1.0.0; o novo fluxo de cômodos está descrito nesta seção.
+
 ## 📘 Manual de implantação
 
 Para instalar o projeto em um novo cliente, use o manual completo:
@@ -328,7 +360,7 @@ homologada originalmente como build interna **1.0.8-local.3**, exportada da
 instalação Home Assistant e posteriormente validada em uma segunda instalação
 Home Assistant OS com MQTT, AdGuard Home, DNS local e múltiplos aparelhos LG.
 
-Os seis arquivos funcionais preservados foram conferidos por SHA256 contra
+Na publicação 1.0.0, os seis arquivos funcionais preservados foram conferidos por SHA256 contra
 os valores fornecidos na homologação, sem alteração de conteúdo.
 
 ## Origem e modificações
@@ -342,9 +374,9 @@ A base interna inclui inicialização com opções do Home Assistant e
 customizações locais em `cloud/homeassistant.ts`, `management/index.ts`,
 `html/panel.js` e `util/friendly-names.ts`, relacionadas à integração
 Home Assistant/MQTT, ao painel de gerenciamento e aos nomes amigáveis
-persistentes. Esses arquivos são provenientes do pacote homologado.
+persistentes. A versão 1.0.0 desses arquivos é proveniente do pacote homologado.
 
-Para esta distribuição pública:
+Na primeira distribuição pública (1.0.0):
 - Os arquivos do add-on foram organizados em `lg_local_thing/`.
 - Somente `name`, `version`, `slug` e `url` foram alterados no
   `config.yaml` homologado.
@@ -353,8 +385,10 @@ Para esta distribuição pública:
 - `Dockerfile`, `run.sh` e os quatro overrides foram preservados
   byte a byte.
 
-As opções funcionais, portas, MQTT, hostname e demais configurações
-originais foram mantidos.
+Na 1.1.0, os overrides de painel, gerenciamento, nomes e descoberta MQTT
+foram atualizados e o Dockerfile passou a copiar os novos recursos. Os hashes
+desses arquivos mudaram; a homologação byte a byte acima é histórica da 1.0.0.
+O commit upstream, `run.sh`, as opções MQTT, as portas e o hostname foram mantidos.
 
 ## Estrutura
 
@@ -362,7 +396,7 @@ originais foram mantidos.
 - `lg_local_thing/config.yaml`: configuração pública do add-on.
 - `lg_local_thing/Dockerfile`: construção com o commit upstream congelado.
 - `lg_local_thing/run.sh`: inicialização homologada.
-- `lg_local_thing/overrides/`: quatro arquivos homologados de customização.
+- `lg_local_thing/overrides/`: customizações do painel, nomes, MQTT e integração com áreas do HA.
 - `docs/`: documentação de implantação.
 - `CHANGELOG.md`: histórico da distribuição pública.
 - `COPYING`: licença GNU GPL v2 integral do upstream.
@@ -390,6 +424,11 @@ do upstream no commit congelado indicado acima.
 
 Os créditos e avisos de autoria e licença do ReThink e de seus
 colaboradores são preservados. Esta distribuição é derivada do ReThink.
+
+O símbolo LG incluído no add-on e no painel identifica os aparelhos compatíveis.
+Fonte: [LG symbol — Wikimedia Commons](https://commons.wikimedia.org/wiki/File:LG_symbol.svg),
+autoria LG Corporation, classificado na fonte como PD-textlogo. LG é marca de
+seu titular; este projeto independente é mantido por Smart House.
 
 ## Repositório
 

@@ -1,471 +1,140 @@
-document.addEventListener('DOMContentLoaded', function () {
-    M.Tooltip.init(document.querySelectorAll('.tooltipped'))
-    M.Modal.init(document.querySelectorAll('.modal'))
-    M.FormSelect.init(document.querySelectorAll('select'))
-    M.Autocomplete.init(document.querySelectorAll('.autocomplete'), {
-        data: {
-            '101 (Refrigerator)': null,
-            '201 (Washer)': null,
-            '202 (Dryer)': null,
-            '204 (Dishwasher)': null,
-            '223 (WashTower)': null,
-            '301 (Gas Range)': null,
-            '302 (Microwave)': null,
-            '401 (Air Conditioner)': null,
-        },
-    })
-})
-
-let ws
-let reconnectTimer
-const STATUS_OK = `<i class="tiny material-icons green-text">check</i>`
-const STATUS_ERROR = `<i class="tiny material-icons red-text">error</i>`
-const STATUS_UNKNOWN = `<i class="tiny material-icons red-text">question_mark</i>`
-let bridge_status = false
-
-get('status_rethink').innerHTML = STATUS_UNKNOWN
-get('status_mqtt').innerHTML = STATUS_UNKNOWN
-get('status_bridge').innerHTML = STATUS_UNKNOWN
-get('status_bridge_text').innerText = 'Unknown'
-
-const devices = {}
-
-const baseUrl = new URL(window.location)
-baseUrl.search = ''
-baseUrl.hash = ''
-
-class DeviceEntry {
-    constructor(id, remoteState, parent) {
-        this.id = id
-        this.remoteState = remoteState
-        this.row = document.createElement('tr')
-        this.updateDom()
-        parent.appendChild(this.row)
-    }
-
-    destroy() {
-        this.row.remove()
-    }
-
-    update(remoteState) {
-        this.remoteState = remoteState
-        this.updateDom()
-    }
-
-    updateDom() {
-        const children = []
-
-        let td
-
-        /*
-         * Smart House local friendly name.
-         *
-         * The first saved value also establishes the Home Assistant entity
-         * base. Changing this input later changes only the display name.
-         */
-        td = document.createElement('td')
-        td.className = 'dev-name'
-
-        const nameEditor = document.createElement('div')
-        nameEditor.style.display = 'flex'
-        nameEditor.style.alignItems = 'center'
-        nameEditor.style.gap = '0.4rem'
-        nameEditor.style.minWidth = '12rem'
-
-        const nameInput = document.createElement('input')
-        nameInput.type = 'text'
-        nameInput.maxLength = 80
-        nameInput.value = this.remoteState.name || ''
-        nameInput.placeholder = this.remoteState.cloudName
-            ? `Friendly name (${this.remoteState.cloudName})`
-            : 'Friendly name'
-        nameInput.title = this.remoteState.name || this.remoteState.cloudName || ''
-        nameInput.style.margin = '0'
-        nameInput.style.minWidth = '7rem'
-
-        const saveNameButton = document.createElement('a')
-        saveNameButton.href = '#'
-        saveNameButton.className = 'btn-small waves-effect waves-light'
-        saveNameButton.title = 'Save friendly name'
-        saveNameButton.innerHTML = '<i class="material-icons">save</i>'
-
-        nameEditor.appendChild(nameInput)
-        nameEditor.appendChild(saveNameButton)
-
-        const entityHint = document.createElement('div')
-        entityHint.style.fontSize = '0.72rem'
-        entityHint.style.color = 'rgba(0, 0, 0, 0.54)'
-        entityHint.style.marginTop = '0.15rem'
-
-        if (this.remoteState.entityBase) {
-            entityHint.innerText = `HA entity base: ${this.remoteState.entityBase}`
-        } else {
-            entityHint.innerText = 'First save defines the HA entity ID'
-        }
-
-        td.appendChild(nameEditor)
-        td.appendChild(entityHint)
-        children.push(td)
-
-        this.nameInput = nameInput
-        this.nameSaveButton = saveNameButton
-
-        this.nameSaveButton.onclick = (event) => {
-            event.preventDefault()
-            void this.saveFriendlyName()
-        }
-
-        this.nameInput.onkeydown = (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault()
-                void this.saveFriendlyName()
-            }
-        }
-
-        td = document.createElement('td')
-        td.className = 'dev-id'
-        td.innerText = this.id
-        td.title = this.id
-        children.push(td)
-
-        td = document.createElement('td')
-        td.className = 'dev-model'
-        let model = this.remoteState.model
-        if (!this.remoteState.mapped) {
-            model += ` <i class="material-icons tooltipped tiny" data-position="bottom" data-tooltip="This device is not supported by rethink. It will not be mapped to HomeAssistant">warning</i>`
-        }
-        td.innerHTML = model
-        children.push(td)
-
-        td = document.createElement('td')
-        td.className = 'dev-platform'
-        td.innerText = this.remoteState.platform
-        children.push(td)
-
-        // The width lives in the stylesheet now: on a narrow screen this cell moves out of the
-        // column layout entirely, and a fixed width there would push the row wide again.
-        td = document.createElement('td')
-        td.className = 'dev-bridge'
-        td.innerHTML = `
-            <div class="switch">
-                <label>Off <input type="checkbox"> <span class="lever"></span>On</label>
-            </div>
-            <div class="hide preloader-wrapper verysmall active">
-                <div class="spinner-layer spinner-green-only">
-                <div class="circle-clipper left">
-                    <div class="circle"></div>
-                </div><div class="gap-patch">
-                    <div class="circle"></div>
-                </div><div class="circle-clipper right">
-                    <div class="circle"></div>
-                </div>
-                </div>
-            </div>`
-        children.push(td)
-
-        this.bridgeSwitch = td.getElementsByTagName('input')[0]
-        this.bridgeDiv = td.getElementsByClassName('switch')[0]
-        this.spinner = td.getElementsByClassName('preloader-wrapper')[0]
-
-        const startBridge = async (deviceType) => {
-            this.bridgeBusy = true
-            this.refreshUI()
-
-            try {
-                await fetchWrapper(`bridge/${this.id}/enable`, { deviceType }, { method: 'POST' })
-                this.remoteState.bridged = true
-            } finally {
-                this.bridgeBusy = false
-                this.refreshUI()
-            }
-        }
-
-        const stopBridge = async () => {
-            this.bridgeBusy = true
-            this.refreshUI()
-
-            try {
-                await fetchWrapper(`bridge/${this.id}/disable`, {}, { method: 'POST' })
-                this.remoteState.bridged = false
-            } finally {
-                this.bridgeBusy = false
-                this.refreshUI()
-            }
-        }
-
-        this.bridgeSwitch.onchange = () => {
-            if (this.bridgeSwitch.checked) {
-                if (this.remoteState.deviceType) {
-                    startBridge(this.remoteState.deviceType)
-                } else {
-                    get('btn_devicetype_continue').onclick = () => {
-                        let devType = get('devtype-input').value
-                        devType = devType.split(' ')[0]
-                        startBridge(devType)
-                        M.Modal.getInstance(get('devicetype_query')).close()
-                    }
-                    M.Modal.getInstance(get('devicetype_query')).open()
-                }
-            } else {
-                stopBridge()
-            }
-        }
-
-        td = document.createElement('td')
-        // Materialize disables a button with pointer-events: none, which would swallow the hover
-        // that opens its tooltip - so the tooltip lives on a wrapper instead of on the button.
-        td.className = 'dev-actions'
-        td.innerHTML = `
-            <span class="tooltipped" style="display: inline-block" data-position="bottom" data-tooltip="Monitor">
-                <a class="btn waves-effect waves-light" href="monitor?id=${this.id}"><i class="material-icons">troubleshoot</i></a>
-            </span>
-            <span class="tooltipped" style="display: inline-block" data-position="bottom"
-                data-tooltip="Download the modelJSON file. Requires bridge mode.">
-                <a class="btn waves-effect waves-light"><i class="material-icons">description</i></a>
-            </span>`
-        children.push(td)
-
-        this.modelJsonButton = td.getElementsByTagName('a')[1]
-        this.modelJsonButton.onclick = () => this.downloadModelJson()
-
-        this.row.replaceChildren(...children)
-        Array.from(this.row.getElementsByClassName('tooltipped')).forEach((e) => M.Tooltip.init(e))
-
-        // The markup above is rebuilt from scratch, so the switch comes back unchecked and the
-        // spinner comes back visible. Nothing else re-applies the row's actual state: a plain
-        // {devices} broadcast - which is what enabling a bridge, or any appliance connecting or
-        // dropping, sends - never reaches the branch that refreshes every row. Without this the
-        // whole table reads as "all bridges off" until the page is reloaded.
-        this.refreshUI()
-    }
-
-    async saveFriendlyName() {
-        if (this.friendlyNameBusy) return
-
-        const name = this.nameInput.value.trim()
-
-        if (!name) {
-            M.toast({ html: 'Friendly name cannot be empty' })
-            return
-        }
-
-        this.friendlyNameBusy = true
-        this.nameInput.disabled = true
-        this.nameSaveButton.classList.add('disabled')
-
-        try {
-            const response = await fetchWrapper(
-                `device/${this.id}/name`,
-                { name },
-                { method: 'POST' },
-            )
-
-            if (!response || response.status >= 300) return
-
-            const identity = await response.json()
-
-            this.remoteState.name = identity.name
-            this.remoteState.entityBase = identity.entityBase
-
-            M.toast({ html: 'Friendly name saved' })
-
-            this.updateDom()
-        } finally {
-            this.friendlyNameBusy = false
-
-            /*
-             * updateDom() may have rebuilt the controls after a successful
-             * request, so operate on whichever elements are current.
-             */
-            if (this.nameInput) this.nameInput.disabled = false
-            if (this.nameSaveButton) this.nameSaveButton.classList.remove('disabled')
-        }
-    }
-
-    refreshUI() {
-        if (this.bridgeBusy) {
-            this.bridgeDiv.classList.add('hide')
-            this.spinner.classList.remove('hide')
-        } else {
-            this.spinner.classList.add('hide')
-            this.bridgeDiv.classList.remove('hide')
-            this.bridgeSwitch.checked = !!this.remoteState.bridged
-        }
-
-        // Materialize greys out a switch from the disabled attribute, not from a class, so setting
-        // a class left the switch live while logged out - clicking it just produced an HTTP 400.
-        this.bridgeSwitch.disabled = !bridge_status
-
-        // the modelJSON only comes from the ThinQ cloud, and only for a device registered there
-        this.modelJsonButton.classList.toggle('disabled', !(bridge_status && this.remoteState.bridged))
-    }
-
-    // The modelJSON is fetched by rethink and handed over as a blob, so that a failure shows up as a
-    // toast instead of navigating the panel away to an error page.
-    async downloadModelJson() {
-        if (this.modelJsonButton.classList.contains('disabled') || this.modelJsonBusy) return
-
-        this.modelJsonBusy = true
-        try {
-            const response = await fetch(`${baseUrl}bridge/${this.id}/modeljson`)
-            if (response.status >= 300) {
-                M.toast({ html: `HTTP error ${response.status}: ${await response.text()}` })
-                return
-            }
-
-            const match = /filename="([^"]*)"/.exec(response.headers.get('content-disposition') ?? '')
-            const url = URL.createObjectURL(await response.blob())
-            const link = document.createElement('a')
-            link.href = url
-            link.download = match ? match[1] : `${this.id}.json`
-            link.click()
-            URL.revokeObjectURL(url)
-        } catch (err) {
-            M.toast({ html: `FETCH error: ${err}` })
-        } finally {
-            this.modelJsonBusy = false
-        }
+// LG Local Thing / Smart House, 2026-09-14. UI derived from ReThink, GPL v2.
+'use strict'
+const $ = (id) => document.getElementById(id)
+const base = new URL('./', window.location.href)
+let devices = {}, bridge, socket, retryTimer, retryDelay = 250, connected = false
+let editingId = null, saving = false, areaRequest = 0, areasLoaded = false
+let toastTimer
+function toast(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500) }
+async function api(path, body, method = 'POST') {
+    const response = await fetch(new URL(path, base), { method, headers: body === undefined ? {} : { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+    if (!response.ok) throw new Error((await response.text()) || `Falha HTTP ${response.status}`)
+    return response
+}
+function badge(id, text, state = '') { $(id).textContent = text; $(id).className = `badge ${state}` }
+function el(tag, cls, text) { const node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node }
+function deviceType(type) { return ({'101':'Geladeira','201':'Lavadora','202':'Secadora','204':'Lava-louças','223':'WashTower','301':'Fogão','302':'Micro-ondas','401':'Ar-condicionado'})[String(type)] || 'Aparelho LG' }
+function symbol(type) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 40 40'); svg.classList.add('device-symbol'); svg.setAttribute('aria-hidden','true')
+    const shapes = String(type) === '401' ? '<rect x="3" y="8" width="34" height="19" rx="3"/><path d="M7 21h26M11 30v5m9-5v5m9-5v5"/>' : String(type) === '101' ? '<rect x="10" y="2" width="20" height="36" rx="3"/><path d="M10 17h20m-15-9v5m0 9v8"/>' : '<rect x="6" y="3" width="28" height="34" rx="4"/><circle cx="20" cy="23" r="9"/><path d="M11 9h9m5 0h4"/>'
+    svg.innerHTML = shapes // constant SVG only; user/device data is inserted via textContent
+    return svg
+}
+function render() {
+    const container = $('devices'); container.replaceChildren()
+    const entries = Object.entries(devices)
+    const missing = entries.filter(([, d]) => !d.name).length
+    $('device-count').textContent = `${entries.length} conectado${entries.length === 1 ? '' : 's'}`
+    $('empty-state').hidden = entries.length !== 0 || !connected
+    $('setup-notice').hidden = !missing
+    $('setup-notice').textContent = `${missing} aparelho(s) aguardando configuração. Defina nome e cômodo antes de adicioná-los ao Home Assistant.`
+    for (const [id, d] of entries) {
+        const card = el('article', `device-card${d.name ? '' : ' needs-setup'}`)
+        const row = el('div','device-row'), identity = el('div','device-identity'), naming = el('div')
+        naming.append(el('h3','device-name',d.name || 'Novo aparelho LG'))
+        naming.append(el('div','device-meta',d.name ? d.entityBase : `${deviceType(d.deviceType)} · Nome ainda não definido`))
+        const state = el('span',`badge ${d.name ? (d.mapped ? 'good' : 'pending') : 'pending'}`,!d.name ? 'Configuração pendente' : d.mapped ? 'Conectado' : 'Modelo não mapeado')
+        state.style.marginTop = '8px'; naming.append(state); identity.append(symbol(d.deviceType), naming); row.append(identity)
+        const room = el('div'); room.append(el('div','field-label','Cômodo'),el('strong','',d.room || 'Sem cômodo'))
+        if (d.areaPending) room.append(el('div','device-meta','Aguardando associação no HA'))
+        const model = el('div'); model.append(el('div','field-label','Modelo / Protocolo'),el('strong','',d.model || 'Não informado'),el('div','device-meta',d.platform || '—'))
+        row.append(room,model)
+        const actions = el('div','device-actions'), monitor = el('a','button secondary','Monitorar')
+        monitor.href = new URL(`monitor?id=${encodeURIComponent(id)}`,base).href
+        const edit = el('button',d.name ? 'secondary' : '',d.name ? 'Renomear / cômodo' : 'Configurar aparelho')
+        edit.disabled = !connected; edit.addEventListener('click',() => openIdentity(id)); actions.append(monitor,edit); row.append(actions); card.append(row)
+        const advanced = el('details','device-advanced'); advanced.append(el('summary','', 'Informações e opções avançadas'),el('p','device-meta',`ID: ${id}`))
+        const tools = el('div','actions'), toggle = el('button','secondary',d.bridged ? 'Desativar bridge' : 'Ativar bridge')
+        toggle.disabled = !bridge?.loggedIn || !connected
+        toggle.addEventListener('click',async () => {
+            let type = d.deviceType
+            if (!d.bridged && !type) { type = prompt('Tipo do aparelho (ex.: 401 para ar-condicionado):'); if (!type || !/^\d{3}$/.test(type)) return }
+            toggle.disabled = true
+            try { await api(`bridge/${encodeURIComponent(id)}/${d.bridged ? 'disable' : 'enable'}`, d.bridged ? {} : {deviceType:String(type)}) }
+            catch (error) { toast(error.message) }
+            finally { toggle.disabled = !bridge?.loggedIn }
+        })
+        const download = el('button','secondary','Baixar modelo JSON'); download.disabled = !(bridge?.loggedIn && d.bridged && connected)
+        download.addEventListener('click',async () => {
+            download.disabled = true
+            try { const response = await api(`bridge/${encodeURIComponent(id)}/modeljson`,undefined,'GET'); const url = URL.createObjectURL(await response.blob()); const a = el('a'); a.href=url; a.download=`modelo-${id.replace(/[^a-z0-9-]/gi,'_')}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000) }
+            catch(error) { toast(error.message) } finally { download.disabled = !(bridge?.loggedIn && d.bridged) }
+        })
+        tools.append(toggle,download); advanced.append(tools); card.append(advanced); container.append(card)
     }
 }
-
-// The first reconnect is near-immediate and only then does it back off. A socket that closes because
-// the page went into the back/forward cache, or because rethink restarted under it, otherwise leaves
-// the panel blank - everything is behind .hide-when-offline - for the whole retry interval.
-let retryDelay = 250
-
-function connect() {
-    clearTimeout(reconnectTimer)
-    if (ws) {
-        // detach first: a socket replaced mid-flight still fires its close, which would queue a second
-        // reconnect on top of this one
-        ws.onclose = ws.onopen = ws.onmessage = null
-        try {
-            ws.close()
-        } catch {}
-    }
-    ws = new WebSocket(baseUrl + 'ws')
-
-    ws.onclose = () => {
-        get('status_rethink').innerHTML = STATUS_ERROR
-        get('status_mqtt').innerHTML = STATUS_UNKNOWN
-        document.getElementsByTagName('body')[0].classList.add('offline')
-        reconnectTimer = setTimeout(connect, retryDelay)
-        retryDelay = 5000
-    }
-
-    ws.onopen = () => {
-        retryDelay = 250
-        get('status_rethink').innerHTML = STATUS_OK
-        document.getElementsByTagName('body')[0].classList.remove('offline')
-    }
-
-    ws.onmessage = (ev) => {
-        if (typeof ev.data === 'string') {
-            const json = JSON.parse(ev.data)
-            if (typeof json.ha === 'boolean') {
-                get('status_mqtt').innerHTML = json.ha ? STATUS_OK : STATUS_ERROR
-            }
-
-            if (typeof json.devices === 'object') {
-                let deletedDevices = Object.keys(devices).filter((id) => !json.devices[id])
-                deletedDevices.forEach((id) => {
-                    devices[id].destroy()
-                    delete devices[id]
-                })
-
-                for (const id in json.devices) {
-                    const j = json.devices[id]
-
-                    if (!devices[id]) devices[id] = new DeviceEntry(id, j, get('devices_body'))
-                    else devices[id].update(j)
-                }
-
-                /*
-                 * Smart House always shows the Name column because it is now
-                 * the local configuration editor and no longer depends on a
-                 * linked ThinQ account.
-                 */
-                get('devices_table').classList.remove('no-names')
-            }
-
-            if (typeof json.bridge === 'object') {
-                bridge_status = json.bridge.loggedIn
-                if (json.bridge.loggedIn === true) {
-                    document.getElementById('btn_thinq_login').classList.add('hide')
-                    document.getElementById('btn_thinq_logout').classList.remove('hide')
-
-                    get('status_bridge').innerHTML = STATUS_OK
-                    get('status_bridge_text').innerText = 'Ok'
-                } else {
-                    document.getElementById('btn_thinq_login').classList.remove('hide')
-                    document.getElementById('btn_thinq_logout').classList.add('hide')
-
-                    get('status_bridge').innerHTML = STATUS_ERROR
-                    get('status_bridge_text').innerText = 'Not configured'
-                }
-
-                for (const id in devices) devices[id].refreshUI()
-            }
-
-            if (typeof json.status === 'string') {
-                M.toast({ html: json.status })
-            }
-        }
-    }
-}
-
-get('btn_thinq_login_continue').onclick = () => {
-    if (!get('country_code').validity.valid) return
-
-    const countryCode = get('country_code').value.toUpperCase()
-
-    window.open(`${baseUrl}thinq_login?countryCode=${countryCode}`, '_blank')
-}
-
-get('btn_thinq_login_complete').onclick = async () => {
-    if (!get('country_code').validity.valid) return
-
-    if (!get('login_url').validity.valid) return
-
-    const countryCode = get('country_code').value.toUpperCase()
-    const url = get('login_url').value
-    await fetchWrapper(`thinq_login_accept`, { url, countryCode }, { method: 'POST' })
-    M.Modal.getInstance(get('thinq_login')).close()
-}
-
-get('btn_thinq_logout_continue').onclick = async () => {
-    await fetchWrapper(`thinq_logout`, {}, { method: 'POST' })
-    M.Modal.getInstance(get('thinq_logout')).close()
-}
-
-/*
- * A page restored from the browser's back/forward cache comes back with a socket the browser has
- * killed on the way in, and the close handler hides everything behind .hide-when-offline - so
- * pressing Back from the monitor lands on a panel with no device list. Reconnect unconditionally:
- * the socket can still read as OPEN at this point and only report its close a moment later, so
- * checking readyState here is exactly the mistake that made the first attempt at this a no-op.
- */
-window.addEventListener('pageshow', (ev) => {
-    if (ev.persisted) connect() // a full load runs connect() on its own
-})
-
-function get(id) {
-    return document.getElementById(id)
-}
-
-async function fetchWrapper(path, body, options) {
-    if (options.method !== 'GET') {
-        if (!options.headers) options.headers = {}
-        options.headers['Content-type'] = 'application/json'
-    }
-    options.body = JSON.stringify(body)
+function closeIdentity() { if (saving) return; areaRequest++; editingId=null; $('identity-dialog').close() }
+async function loadAreas(id) {
+    const request = ++areaRequest; areasLoaded = false
+    $('device-area').disabled = true; $('device-area').replaceChildren(new Option('Carregando cômodos…','keep'))
+    $('reload-areas').hidden=true
     try {
-        const response = await fetch(`${baseUrl}${path}`, options)
-        if (response.status >= 300) M.toast({ html: `HTTP error ${response.status}: ${await response.text()}` })
-
-        return response
-    } catch (err) {
-        M.toast({ html: `FETCH error: ${err}` })
+        const response = await api('areas',undefined,'GET'), areas = await response.json()
+        if (request !== areaRequest || editingId !== id) return
+        const d = devices[id] || {}
+        $('device-area').replaceChildren(new Option(d.areaId === undefined ? 'Sem cômodo' : 'Manter cômodo atual','keep'),new Option('Sem cômodo — remover associação','none'))
+        for (const area of areas.sort((a,b) => a.name.localeCompare(b.name,'pt-BR'))) $('device-area').add(new Option(area.name,area.area_id))
+        $('device-area').add(new Option('+ Criar novo cômodo…','new'))
+        // Default to no mutation: only an explicit selection moves a registered HA device.
+        $('device-area').value='keep'; $('device-area').disabled=false; areasLoaded=true
+        $('area-help').textContent = d.room ? `Cômodo salvo: ${d.room}. Selecione outro para mover o aparelho no HA.` : 'Escolha um cômodo ou crie um novo; ele será associado ao aparelho no Home Assistant.'
+    } catch(error) {
+        if (request !== areaRequest || editingId !== id) return
+        $('device-area').replaceChildren(new Option('Manter cômodo / configurar depois','keep'))
+        $('area-help').textContent = `${error.message} Você ainda pode salvar o nome.`
+        $('reload-areas').hidden=false
     }
 }
+function openIdentity(id) {
+    const d = devices[id]; if (!d) return
+    editingId=id; $('identity-form').reset(); $('identity-error').hidden=true; $('new-area-field').hidden=true
+    $('identity-title').textContent = d.name ? 'Editar nome e cômodo' : 'Configurar novo aparelho'
+    $('identity-description').textContent = d.name ? 'O nome pode mudar. Os IDs das entidades e suas automações serão preservados.' : 'Dê um nome ao aparelho e escolha onde ele fica. Ao salvar, os modelos compatíveis serão adicionados ao Home Assistant.'
+    $('device-name').value=d.name || ''; $('device-name').placeholder=d.cloudName || 'Ex.: Ar-condicionado Sala'
+    $('identity-save').textContent=d.name ? 'Salvar alterações' : 'Salvar e adicionar ao HA'
+    $('identity-dialog').showModal(); $('device-name').focus(); void loadAreas(id)
+}
+$('device-area').addEventListener('change',() => { const create = $('device-area').value==='new'; $('new-area-field').hidden=!create; $('new-area-name').required=create })
+$('identity-close').onclick=$('identity-cancel').onclick=closeIdentity
+$('identity-dialog').addEventListener('cancel',(event) => {event.preventDefault();closeIdentity()})
+$('reload-areas').onclick=() => { if(editingId) void loadAreas(editingId) }
+$('identity-form').addEventListener('submit',async (event) => {
+    event.preventDefault(); if (saving || !editingId) return
+    const id=editingId, name=$('device-name').value.trim(), selected=$('device-area').value
+    if (!name) { $('device-name').setCustomValidity('Informe o nome do aparelho.'); $('device-name').reportValidity(); return }
+    if (!connected || !devices[id]) { $('identity-error').textContent='O aparelho não está mais conectado. Aguarde e tente novamente.'; $('identity-error').hidden=false; return }
+    const body={name}
+    if(areasLoaded && selected!=='keep') { body.areaId=selected==='none'||selected==='new' ? null : selected; if(selected==='new') body.newArea=$('new-area-name').value.trim() }
+    saving=true; $('identity-error').hidden=true
+    for(const control of $('identity-form').elements) control.disabled=true
+    try {
+        const response=await api(`device/${encodeURIComponent(id)}/name`,body), identity=await response.json()
+        if(devices[id]) Object.assign(devices[id],identity)
+        render(); toast(identity.areaPending ? 'Nome salvo. Associando o cômodo no Home Assistant…' : 'Nome salvo.'); saving=false;closeIdentity()
+    } catch(error) { $('identity-error').textContent=error.message; $('identity-error').hidden=false }
+    finally { saving=false; for(const control of $('identity-form').elements) control.disabled=false; $('device-area').disabled=!areasLoaded }
+})
+$('device-name').addEventListener('input',()=>$('device-name').setCustomValidity(''))
+function connect() {
+    clearTimeout(retryTimer)
+    if(socket) { socket.onclose=socket.onopen=socket.onmessage=null; socket.close() }
+    const url=new URL('ws',base); url.protocol=url.protocol==='https:'?'wss:':'ws:'; socket=new WebSocket(url)
+    socket.onopen=()=>{ connected=true;retryDelay=250;badge('server-status','Online','good');$('connection-notice').hidden=true;render() }
+    socket.onclose=()=>{ connected=false;badge('server-status','Reconectando','bad');badge('mqtt-status','Desconhecido');$('connection-notice').hidden=false;$('connection-notice').textContent='Conexão interrompida. Os dados podem estar desatualizados; tentando reconectar…';render();retryTimer=setTimeout(connect,retryDelay);retryDelay=5000 }
+    socket.onmessage=(event)=>{
+        let data;try{data=JSON.parse(event.data)}catch{return}
+        if(typeof data.ha==='boolean') badge('mqtt-status',data.ha?'Conectado':'Desconectado',data.ha?'good':'bad')
+        if(Object.prototype.hasOwnProperty.call(data,'bridge')) bridge=data.bridge
+        if(data.devices && typeof data.devices==='object') devices=data.devices
+        badge('bridge-status',bridge?.loggedIn?'Conectado':bridge?'Não configurado':'Desativado',bridge?.loggedIn?'good':'')
+        $('bridge-login').hidden=!bridge || !!bridge.loggedIn; $('bridge-logout').hidden=!bridge?.loggedIn
+        if(data.status) toast(String(data.status));render()
+    }
+}
+$('bridge-login').onclick=()=>$('login-dialog').showModal()
+$('login-cancel').onclick=()=>$('login-dialog').close()
+$('open-lg-login').onclick=()=>{ if(!$('country-code').reportValidity())return; window.open(new URL(`thinq_login?countryCode=${encodeURIComponent($('country-code').value.toUpperCase())}`,base),'_blank','noopener,noreferrer') }
+$('login-form').onsubmit=async(event)=>{event.preventDefault();try{await api('thinq_login_accept',{url:$('login-url').value,countryCode:$('country-code').value.toUpperCase()});$('login-url').value='';$('login-dialog').close()}catch(error){$('login-error').hidden=false;$('login-error').textContent=error.message}}
+$('bridge-logout').onclick=async()=>{if(!confirm('Sair da conta LG e desativar o bridge de todos os aparelhos?'))return;try{await api('thinq_logout',{});toast('Conta LG desconectada.')}catch(error){toast(error.message)}}
+window.addEventListener('pageshow',(event)=>{if(event.persisted)connect()})
 connect()

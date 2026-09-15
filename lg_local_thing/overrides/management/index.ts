@@ -1,3 +1,4 @@
+// LG Local Thing: authenticated HA room management, 2026-09-14. GPL v2.
 import { WebSocketExpress, ExtendedWebSocket } from 'websocket-express'
 
 import path from 'path'
@@ -11,6 +12,7 @@ import { Request, Response } from 'express'
 import { Device as T1Device } from '@/cloud/thinq1/device'
 import { Device as T2Device } from '@/cloud/thinq2/device'
 import { friendlyNames } from '@/util/friendly-names'
+import { HomeAssistantAreas, isIngressAddress } from '@/util/ha-areas'
 
 // refresh bridged device names policy:
 // - only if a websocket subscriber is connected
@@ -25,6 +27,28 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
     const deviceMonitors = new Map<ExtendedWebSocket, () => void>()
     const disposers: Array<() => void> = []
     let shuttingDown = false
+    const areas = new HomeAssistantAreas()
+    let syncingAreas = false
+    const savingDevices = new Set<string>()
+    async function syncAreas() {
+        if (syncingAreas || shuttingDown || !process.env.SUPERVISOR_TOKEN) return
+        syncingAreas = true
+        try {
+            for (const [id, identity] of friendlyNames.pending()) {
+                if (shuttingDown) break
+                if (savingDevices.has(id) || identity.areaId === undefined) continue
+                try {
+                    if (await areas.assign(id, identity.areaId)) {
+                        friendlyNames.markAreaSynced(id, identity.areaId)
+                        refreshDevices()
+                    }
+                } catch { /* Keep pending for the next discovery / retry. No credentials in logs. */ }
+            }
+        } finally { syncingAreas = false }
+    }
+    const areaTimer = setInterval(() => void syncAreas(), 30000)
+    areaTimer.unref()
+    disposers.push(() => clearInterval(areaTimer))
 
     function closeQuietly(ws: ExtendedWebSocket) {
         try {
@@ -47,6 +71,15 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             closeQuietly(ws)
             return false
         }
+    }
+
+    // Room operations require the authenticated Supervisor ingress peer, not forwarded headers.
+    function requireIngress(req: Request, res: Response): boolean {
+        if (!isIngressAddress(req.socket.remoteAddress) || req.get('sec-fetch-site') === 'cross-site') {
+            res.status(403).end('Abra a interface pelo Home Assistant para configurar cômodos.')
+            return false
+        }
+        return true
     }
 
     // device management
@@ -113,6 +146,9 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                 // is exposed only as a suggestion and never controls Home Assistant identity.
                 name: identity?.name,
                 entityBase: identity?.entityBase,
+                room: identity?.room,
+                areaId: identity?.areaId,
+                areaPending: identity?.areaPending,
                 cloudName: bridge?.name(id),
                 model: meta.modelId,
                 deviceType: meta.deviceType,
@@ -130,6 +166,7 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
 
     function onNewDevice(dev: AnyDevice) {
         refreshDevices()
+        void syncAreas()
     }
 
     /*
@@ -144,6 +181,12 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
      * Saving also republishes this device's MQTT Discovery configuration.
      * The HA-side unique_id remains based on the physical device id.
      */
+    app.get('/areas', asyncHandler(async (req, res) => {
+        if (!requireIngress(req, res)) return
+        try { res.json(await areas.list()) }
+        catch { res.status(503).end('Não foi possível carregar os cômodos do Home Assistant. Tente novamente.') }
+    }))
+
     app.post(
         '/device/:deviceId/name',
         asyncHandler(async (req, res) => {
@@ -160,8 +203,20 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                 return
             }
 
+            const hasArea = Object.prototype.hasOwnProperty.call(req.body, 'areaId')
+            if ((hasArea || req.body.newArea !== undefined) && !requireIngress(req, res)) return
+            if (!req.body.name.trim() || req.body.name.trim().length > 80) {
+                res.status(400).end('Informe um nome entre 1 e 80 caracteres.')
+                return
+            }
+            if (savingDevices.has(id) || syncingAreas) {
+                res.status(409).end('Sincronização em andamento. Tente novamente em instantes.')
+                return
+            }
+            savingDevices.add(id)
             try {
-                const identity = friendlyNames.set(id, req.body.name)
+                const area = hasArea ? await areas.resolve(req.body.areaId, req.body.newArea) : undefined
+                const identity = friendlyNames.set(id, req.body.name, area)
 
                 /*
                  * If the model is supported, this is the moment the first
@@ -174,9 +229,10 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                 refreshDevices()
 
                 res.json(identity)
+                setTimeout(() => void syncAreas(), 1000).unref()
             } catch (err) {
-                res.status(400).end(err instanceof Error ? err.message : `${err}`)
-            }
+                res.status(400).end(err instanceof Error ? err.message : 'Falha ao salvar.')
+            } finally { savingDevices.delete(id) }
         }),
     )
 

@@ -1,3 +1,4 @@
+// LG Local Thing: suggest room on first MQTT discovery, 2026-09-14. GPL v2.
 import * as mqtt from 'mqtt'
 import { TypedEmitter } from 'tiny-typed-emitter'
 import { HAConfig } from '@/util/config'
@@ -96,6 +97,7 @@ function applyFriendlyIdentity(config: DeviceDiscovery, identity: FriendlyIdenti
         device: {
             ...config.device,
             name: identity.name,
+            ...(identity.room ? { suggested_area: identity.room } : {}),
         },
         components,
     }
@@ -244,6 +246,7 @@ export class Connection extends TypedEmitter<ConnectionEvents> {
 
 export type DeviceInfo = {
     identifiers: string | string[]
+    suggested_area?: string
     manufacturer?: string
     model?: string
     sw_version?: string
