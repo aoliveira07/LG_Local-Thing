@@ -21,7 +21,7 @@ function symbol(type) {
     return svg
 }
 function render() {
-    const container = $('devices'); container.replaceChildren()
+    const container = $('devices'); const opened = new Set([...container.querySelectorAll('details[open]')].map(d => d.dataset.deviceId)); container.replaceChildren()
     const entries = Object.entries(devices)
     const missing = entries.filter(([, d]) => !d.name).length
     $('device-count').textContent = `${entries.length} conectado${entries.length === 1 ? '' : 's'}`
@@ -41,9 +41,9 @@ function render() {
         row.append(room,model)
         const actions = el('div','device-actions'), monitor = el('a','button secondary','Monitorar')
         monitor.href = new URL(`monitor?id=${encodeURIComponent(id)}`,base).href
-        const edit = el('button',d.name ? 'secondary' : '',d.name ? 'Renomear / cômodo' : 'Configurar aparelho')
+        const edit = el('button',d.name ? 'secondary' : '',d.name ? 'Editar' : 'Configurar aparelho')
         edit.disabled = !connected; edit.addEventListener('click',() => openIdentity(id)); actions.append(monitor,edit); row.append(actions); card.append(row)
-        const advanced = el('details','device-advanced'); advanced.append(el('summary','', 'Informações e opções avançadas'),el('p','device-meta',`ID: ${id}`))
+        const advanced = el('details','device-advanced'); advanced.dataset.deviceId=id; advanced.open=opened.has(id); advanced.append(el('summary','', 'Informações e opções avançadas'),el('p','device-meta',`ID: ${id}`))
         const tools = el('div','actions'), toggle = el('button','secondary',d.bridged ? 'Desativar bridge' : 'Ativar bridge')
         toggle.disabled = !bridge?.loggedIn || !connected
         toggle.addEventListener('click',async () => {
@@ -60,7 +60,7 @@ function render() {
             try { const response = await api(`bridge/${encodeURIComponent(id)}/modeljson`,undefined,'GET'); const url = URL.createObjectURL(await response.blob()); const a = el('a'); a.href=url; a.download=`modelo-${id.replace(/[^a-z0-9-]/gi,'_')}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000) }
             catch(error) { toast(error.message) } finally { download.disabled = !(bridge?.loggedIn && d.bridged) }
         })
-        tools.append(toggle,download); advanced.append(tools); card.append(advanced); container.append(card)
+        tools.append(toggle,download); advanced.append(tools); actions.append(advanced); container.append(card)
     }
 }
 function closeIdentity() { if (saving) return; areaRequest++; editingId=null; $('identity-dialog').close() }

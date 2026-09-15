@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1 — Monitoramento e navegação
+
+- Botão Editar no painel e opções avançadas abaixo de Monitorar.
+- Tela de monitoramento no tema Smart House, em português, com Voltar aos aparelhos.
+- Navegação preserva o caminho do Ingress do Home Assistant.
+- Rolagem automática opcional, limpeza e limite de 500 mensagens no monitor.
+- Comandos de diagnóstico recolhidos; envio desabilitado ao perder a conexão.
+- Opções avançadas permanecem abertas durante atualizações do painel.
+- Build do aplicativo e testes de navegador passaram: navegação, comandos,
+  mensagens, rolagem e telas de 320, 390, 768 e 1440 px.
+- Build Docker e teste com aparelhos reais dependem da atualização no HA.
+
 ## 1.1.0 — Painel Smart House e cômodos
 
 Status: **disponível para teste em instalação Home Assistant**.

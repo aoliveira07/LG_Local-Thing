@@ -3,7 +3,7 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
-## Versão 1.1.0 — painel e cômodos
+## Versão 1.1.1 — painel, monitoramento e cômodos
 
 Atualização disponível para teste em instalação real. Inclui o painel escuro
 Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
@@ -11,7 +11,7 @@ Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
 - **Primeiro cadastro:** o aparelho aparece como “Novo aparelho LG”. Clique em
   **Configurar aparelho**, informe o nome e escolha um cômodo existente ou
   **Criar novo cômodo**. Também é possível deixar o cômodo para depois.
-- **Depois do cadastro:** use **Renomear / cômodo**. Alterar o nome preserva
+- **Depois do cadastro:** use **Editar**. Alterar o nome preserva
   os identificadores das entidades já criadas e as automações que os utilizam.
 - O cômodo é uma área real do Home Assistant. O add-on associa o dispositivo
   MQTT a essa área; entidades sem área própria herdam a área do dispositivo.
@@ -25,7 +25,7 @@ Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
   novamente depois. Renomear sem escolher um cômodo mantém a associação atual.
 
 Para atualizar, procure atualizações na loja de aplicativos/complementos,
-abra **LG Local Thing** e instale **1.1.0**. Aguarde a construção e inicialização,
+abra **LG Local Thing** e instale **1.1.1**. Aguarde a construção e inicialização,
 então reabra a Interface Web. Os dados em `/data/` são mantidos; não desinstale
 o add-on para atualizar. Esta versão habilita `homeassistant_api` para gerenciar
 áreas usando a autorização interna do Supervisor, sem pedir token ao usuário.
@@ -34,6 +34,18 @@ A compilação e os testes específicos de nomes/cômodos passaram. O build Dock
 e o comportamento com HA/aparelhos reais precisam ser conferidos na instalação.
 Veja [validação da 1.1.0](docs/TESTING-1.1.0.md). O PDF abaixo documenta a
 implantação da 1.0.0; o novo fluxo de cômodos está descrito nesta seção.
+
+### Monitoramento e uso no celular
+
+Use **Monitorar** para ver as mensagens do aparelho e **Voltar aos aparelhos**
+para retornar ao painel dentro do Home Assistant. A tela segue o mesmo tema
+Smart House. Os comandos de diagnóstico ficam recolhidos em opções avançadas.
+
+A lista de aparelhos tem rolagem vertical conforme necessário. No monitor,
+**Rolagem automática** acompanha novas mensagens; desmarque para ler o histórico
+sem avançar para o fim. **Limpar mensagens** limpa somente a exibição local.
+São mantidas as últimas 500 mensagens. O painel e o monitor foram exercitados
+em navegador com larguras de 320, 390, 768 e 1440 px, sem rolagem horizontal.
 
 ## 📘 Manual de implantação
 
