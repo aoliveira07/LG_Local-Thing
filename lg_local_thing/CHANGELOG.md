@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — Suporte experimental CST_570004_WW
+
+- Driver específico para AMNW24GTBA0 baseado no RAC_056905_WW, mantendo os demais modelos.
+- Inicialização a partir dos cinco campos de estado observados nas capturas reais.
+- Ventilação 1, 2, 4, 6 e auto, conforme controle AKB75735404 / PWLSSB21H.
+- Comandos de ligar/desligar, temperatura e modos padrão RAC.
+- Swing vertical/horizontal, Jet, purificação, economia e temporizadores condicionados às capacidades anunciadas pelo aparelho.
+- Não aplica sondagem de filtro nem calibração de potência específica do RAC ao CST.
+- 3 testes CST, 6 testes de nomes/cômodos e 27 testes RAC/TLV passaram; build do aplicativo passou.
+- Capturas validam leitura; comandos de saída foram testados em simulação, ainda pendentes de validação no aparelho real.
+
 ## 1.1.1 — Monitoramento e navegação
 
 - Botão Editar no painel e opções avançadas abaixo de Monitorar.

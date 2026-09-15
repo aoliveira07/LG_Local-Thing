@@ -5,7 +5,7 @@ description: >
   with persistent friendly names, stable Home Assistant entity IDs,
   configurable MQTT and frozen upstream source.
 
-version: "1.1.1"
+version: "1.2.0"
 
 slug: lg_local_thing
 

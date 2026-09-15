@@ -3,7 +3,36 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
-## Versão 1.1.1 — painel, monitoramento e cômodos
+## Versão 1.2.0 — suporte experimental AMNW24GTBA0
+
+O modelo `CST_570004_WW` agora possui um driver próprio baseado no RAC do
+ReThink. A ventilação oferece **1, 2, 4, 6 e auto**, conforme as capturas com
+o controle AKB75735404 / PWLSSB21H. Os demais modelos mantêm seus drivers.
+
+Inclui comandos de ligar/desligar, temperatura (18–30 °C, faixa herdada do RAC)
+e modos refrigerar, desumidificar, ventilar, aquecer e automático. Somente a
+leitura em refrigeração, liga/desliga, ajustes de 20/22 °C e as velocidades
+informadas foi verificada nas capturas reais. Faixa, demais modos e todos os
+comandos enviados pelo HA ainda precisam de validação no equipamento.
+
+Swing vertical/horizontal, Jet, purificação, economia e temporizadores usam
+os comandos do driver original e aparecem quando o aparelho anuncia as
+capacidades correspondentes. Não são habilitados apenas pela presença de um
+botão no controle. Ângulo individual das aletas, Air Flow, iluminação e outras
+funções sem mapeamento comprovado não receberam comandos inventados.
+
+Após atualizar, abra o painel, confirme o nome do aparelho e confira a entidade
+de climatização na integração MQTT. Se permanecer sem entidade, altere uma vez
+a temperatura pelo controle correto para produzir o pacote completo de estado.
+Teste primeiro desligar/ligar, depois 20/22 °C e as cinco opções de ventilação.
+Confira a resposta física e o estado devolvido antes de testar os modos extras.
+O nome e os IDs existentes são preservados.
+
+Build do aplicativo e 36 testes direcionados passaram. Os testes dos comandos
+usam simulação; o build Docker e os testes físicos serão feitos ao atualizar
+no Home Assistant. Esta versão é experimental para o CST.
+
+## Painel, monitoramento e cômodos
 
 Atualização disponível para teste em instalação real. Inclui o painel escuro
 Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
@@ -25,7 +54,7 @@ Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
   novamente depois. Renomear sem escolher um cômodo mantém a associação atual.
 
 Para atualizar, procure atualizações na loja de aplicativos/complementos,
-abra **LG Local Thing** e instale **1.1.1**. Aguarde a construção e inicialização,
+abra **LG Local Thing** e instale **1.2.0**. Aguarde a construção e inicialização,
 então reabra a Interface Web. Os dados em `/data/` são mantidos; não desinstale
 o add-on para atualizar. Esta versão habilita `homeassistant_api` para gerenciar
 áreas usando a autorização interna do Supervisor, sem pedir token ao usuário.
