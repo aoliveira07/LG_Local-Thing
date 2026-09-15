@@ -1,3 +1,4 @@
+import { commandSource } from '@/util/command-source'
 // LG Local Thing: authenticated HA room management, 2026-09-14. GPL v2.
 import { WebSocketExpress, ExtendedWebSocket } from 'websocket-express'
 
@@ -274,12 +275,22 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             }),
         )
 
+        app.get('/bridge/:deviceId/plan', (req, res) => {
+            if (!requireIngress(req, res)) return
+            if (!manager.allDevices[req.params.deviceId]) { res.status(404).end('Aparelho não encontrado.'); return }
+            res.json({ requiresRegistration: bridge.registrationRequired(req.params.deviceId) })
+        })
+
         app.post(
             '/bridge/:deviceId/enable',
             asyncHandler(async (req, res) => {
+                if (!requireIngress(req, res)) return
+                if (bridge.registrationRequired(req.params.deviceId) && req.body?.confirmRegistration !== true) {
+                    res.status(409).end('O bridge exige confirmação de recadastro na conta LG.'); return
+                }
                 const deviceType = typeof req.body.deviceType === 'string' ? (req.body.deviceType as string) : undefined
                 try {
-                    if (await bridge.enable(req.params.deviceId, deviceType, statusReport)) res.status(204).end()
+                    if (await bridge.enable(req.params.deviceId, deviceType, statusReport, req.body?.confirmRegistration === true)) res.status(204).end()
                     else res.status(400).end()
                 } catch (err) {
                     res.status(500).end(`${err}`)
@@ -378,8 +389,8 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
 
             const onDeviceTx = (arg: Buffer | object) => {
                 if (Buffer.isBuffer(arg))
-                    safeSend(ws, JSON.stringify({ tx: arg.toString('hex'), injected: injectFlag }))
-                else safeSend(ws, JSON.stringify({ tx: JSON.stringify(arg), injected: injectFlag }))
+                    safeSend(ws, JSON.stringify({ tx: arg.toString('hex'), injected: injectFlag, source: injectFlag ? 'manual' : commandSource(id) }))
+                else safeSend(ws, JSON.stringify({ tx: JSON.stringify(arg), injected: injectFlag, source: injectFlag ? 'manual' : commandSource(id) }))
             }
 
             const checkDevicePresence = () => {

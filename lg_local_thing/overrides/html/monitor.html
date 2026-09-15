@@ -6,16 +6,24 @@
   <title>Monitorar aparelho · LG Local Thing</title>
   <link rel="icon" href="lg-icon.png">
   <link rel="stylesheet" href="local-thing.css">
+  <script src="diagnostics.js" defer></script>
   <script src="monitor.js" defer></script>
 </head>
 <body><main>
-  <header class="masthead"><div class="brand"><img src="lg-icon.png" width="60" height="60" alt="LG"><div><h1>LG Local Thing</h1><p>Smart House · Integração local</p></div></div><span class="version">v1.2.1</span></header>
+  <header class="masthead"><div class="brand"><img src="lg-icon.png" width="60" height="60" alt="LG"><div><h1>LG Local Thing</h1><p>Smart House · Integração local</p></div></div><span class="version">v1.3.0</span></header>
   <div class="monitor-heading"><h2>Monitorar aparelho</h2><a id="back-link" class="button secondary" href="./">← Voltar aos aparelhos</a></div>
   <section class="device-card monitor-panel" aria-label="Estado do aparelho">
     <div class="monitor-meta"><div><div class="field-label">Identificador do aparelho</div><strong id="device_id"></strong></div><div><div class="field-label">Modelo</div><strong id="device_model">Aguardando informações</strong></div><div><div class="field-label">Estado</div><span id="device_status" class="badge" role="status">Conectando…</span></div></div>
   </section>
   <section class="device-card monitor-panel" aria-labelledby="messages-title">
     <h2 id="messages-title">Mensagens</h2>
+    <details class="advanced"><summary>Comparar HA, LG e resposta do aparelho</summary>
+      <p>Faça uma ação por vez, partindo dos mesmos ajustes. “LG ThinQ” indica tráfego vindo da nuvem, incluindo consultas automáticas; não confirma sozinho uma ação no aplicativo.</p>
+      <div class="notice"><strong>Último comando HA</strong><p id="last-ha">Aguardando captura…</p></div>
+      <div class="notice"><strong>Último comando LG ThinQ</strong><p id="last-lg">Aguardando captura…</p></div>
+      <div class="notice"><strong>Último estado observado do aparelho</strong><p id="last-device">Aguardando captura…</p></div>
+      <p>Os resumos mostram apenas campos conhecidos presentes em cada pacote. Não estabelecem correspondência automática entre comando e resposta. Confira também a reação física do aparelho.</p>
+    </details>
     <div class="monitor-controls"><label for="autoscroll"><input id="autoscroll" type="checkbox" checked>Rolagem automática</label><button id="clear-messages" class="secondary">Limpar mensagens</button></div>
     <div id="messages" role="region" aria-label="Mensagens de diagnóstico" tabindex="0"><p id="message-empty">Aguardando mensagens do aparelho…</p></div>
     <p class="monitor-help">Recebidas à esquerda e enviadas à direita. Clique em uma mensagem para copiá-la ao campo de diagnóstico. São mantidas as últimas 500 mensagens nesta tela.</p>

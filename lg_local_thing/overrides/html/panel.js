@@ -50,7 +50,17 @@ function render() {
             let type = d.deviceType
             if (!d.bridged && !type) { type = prompt('Tipo do aparelho (ex.: 401 para ar-condicionado):'); if (!type || !/^\d{3}$/.test(type)) return }
             toggle.disabled = true
-            try { await api(`bridge/${encodeURIComponent(id)}/${d.bridged ? 'disable' : 'enable'}`, d.bridged ? {} : {deviceType:String(type)}) }
+            try {
+                let confirmRegistration = false
+                if (!d.bridged) {
+                    const plan = await (await api(`bridge/${encodeURIComponent(id)}/plan`,undefined,'GET')).json()
+                    if (plan.requiresRegistration) {
+                        confirmRegistration = confirm(`Ativar o bridge para ${d.name || 'este aparelho'} exige remover e cadastrar novamente este dispositivo na conta LG. Isso pode afetar seu nome, cômodo e rotinas no ThinQ. Deseja continuar?`)
+                        if (!confirmRegistration) return
+                    }
+                }
+                await api(`bridge/${encodeURIComponent(id)}/${d.bridged ? 'disable' : 'enable'}`, d.bridged ? {} : {deviceType:String(type),confirmRegistration})
+            }
             catch (error) { toast(error.message) }
             finally { toggle.disabled = !bridge?.loggedIn }
         })

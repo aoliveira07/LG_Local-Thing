@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — Diagnóstico com origem HA / LG
+
+- Monitor distingue HA, LG ThinQ, diagnóstico manual e serviço local.
+- Resumos de TLV com CRC válido e comparação dos últimos comandos HA/LG e estado observado.
+- Comandos da nuvem continuam sendo encaminhados ao aparelho; atribuição não altera os pacotes.
+- Ativar bridge reutiliza cadastro local salvo quando disponível; novo cadastro exige confirmação explícita e Ingress autenticado.
+- Logout encerra as conexões do bridge e impede reconexão automática sem credenciais.
+- Build, 14 testes direcionados e testes de interface desktop/celular passaram.
+- Operação com a conta LG e comparação física precisam de validação no ambiente do usuário.
+
 ## 1.2.1 — Correção de ligar pelo Home Assistant
 
 - CST: liga com o pacote dedicado de alimentação, validado fisicamente no AMNW24GTBA0.

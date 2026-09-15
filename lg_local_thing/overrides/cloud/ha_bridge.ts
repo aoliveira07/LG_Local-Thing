@@ -1,3 +1,4 @@
+import { withCommandSource } from '@/util/command-source'
 import CST_570004_WW from './devices/CST_570004_WW'
 import POT_056905_WW from './devices/POT_056905_WW'
 import WTDN3 from './devices/WTDN3'
@@ -84,7 +85,7 @@ class Bridge {
         })
         HA.on('setProperty', (id: string, prop: string, value: string) => {
             const ha = this.haDevices.get(id)
-            if (ha) ha.setProperty(prop, value)
+            if (ha) withCommandSource(id, 'ha', () => ha.setProperty(prop, value))
         })
     }
 

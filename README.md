@@ -3,7 +3,50 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
-## Versão 1.2.1 — suporte experimental AMNW24GTBA0
+## Versão 1.3.0 — comparação de comandos HA / LG
+
+O monitor identifica **Home Assistant**, **LG ThinQ**, **Diagnóstico manual** e
+**Serviço local** como origens das mensagens enviadas. As recebidas mostram
+**Aparelho** ou **Simulação de recebimento**. A origem LG inclui consultas da
+nuvem, não apenas comandos iniciados no aplicativo.
+
+Em **Monitorar → Comparar HA, LG e resposta do aparelho**, os últimos comandos
+de cada origem e o estado observado aparecem em resumos de campos conhecidos.
+O resumo confere o CRC do pacote TLV; não interpreta quadros desconhecidos.
+Não é uma validação automática de execução: o bridge encaminha estados à LG,
+portanto o estado exibido no ThinQ também pode ser um reflexo desses mesmos dados.
+Confira o retorno do aparelho e seu comportamento físico.
+
+### Preparar o bridge e comparar
+
+1. Pelo painel dentro do Home Assistant, use **Entrar na conta LG** e conclua o login.
+2. No aparelho a testar, abra as opções avançadas e use **Ativar bridge**.
+3. Se não existir cadastro local salvo do bridge, será pedido consentimento
+   para remover e cadastrar novamente **esse dispositivo** na conta LG. Isso
+   pode afetar nome, cômodo e rotinas do ThinQ. Cancelar não faz o cadastro.
+   O login sozinho não cadastra aparelhos. Esta versão não elimina a necessidade
+   de provisionamento com a nuvem na primeira ativação.
+4. Confira se o aparelho aparece disponível no aplicativo LG ThinQ. Se ocorrer
+   erro no pareamento ou DNS, interrompa e analise os logs antes de alterar
+   o DNS da instalação, que também atende os demais aparelhos.
+5. Abra Monitorar, expanda a comparação e limpe as mensagens. Faça uma ação
+   pelo aplicativo LG, anote o horário e confira o retorno físico e os pacotes.
+6. Retorne ao mesmo estado inicial e execute a mesma ação pelo HA. Compare os
+   campos conhecidos; cabeçalhos, CRC e campos adicionais podem diferir.
+7. Teste uma função por vez. Os resumos mostram campos presentes no último
+   pacote interpretado, não correlacionam automaticamente comando/resposta.
+
+Os comandos do HA continuam locais; o bridge acrescenta tráfego LG como referência.
+Ele permite testes sem registrar comandos arbitrários no driver. O botão
+**Desativar bridge** mantém o comportamento de apagar o estado local desse bridge;
+uma ativação futura pode exigir novo cadastro e sua confirmação. Sair da conta
+encerra as conexões LG. Não compartilhe credenciais, URLs de retorno do login,
+certificados ou arquivos de estado.
+
+Build e 14 testes direcionados passaram, além dos testes de navegador desktop
+e celular. A conexão real com LG não foi exercitada no ambiente de desenvolvimento.
+
+## Suporte experimental AMNW24GTBA0
 
 A 1.2.1 corrige o acionamento pelo HA com o comando dedicado de ligar,
 confirmado fisicamente pelo usuário. Ao mudar de desligado para um modo ativo,
@@ -59,7 +102,7 @@ Smart House, ícone LG e configuração de nome e cômodo no mesmo formulário.
   novamente depois. Renomear sem escolher um cômodo mantém a associação atual.
 
 Para atualizar, procure atualizações na loja de aplicativos/complementos,
-abra **LG Local Thing** e instale **1.2.1**. Aguarde a construção e inicialização,
+abra **LG Local Thing** e instale **1.3.0**. Aguarde a construção e inicialização,
 então reabra a Interface Web. Os dados em `/data/` são mantidos; não desinstale
 o add-on para atualizar. Esta versão habilita `homeassistant_api` para gerenciar
 áreas usando a autorização interna do Supervisor, sem pedir token ao usuário.

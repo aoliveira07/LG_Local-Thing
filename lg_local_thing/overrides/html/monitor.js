@@ -24,19 +24,27 @@ function connect() {
     ws.onmessage = event => {
         let data; try { data = JSON.parse(event.data) } catch { return }
         if (data.rx) pushMessage('rx', String(data.rx), data.injected)
-        if (data.tx) pushMessage('tx', String(data.tx), data.injected)
+        if (data.tx) pushMessage('tx', String(data.tx), data.injected, data.source)
         if (data.status) status(data.status === 'online' ? 'Conectado' : 'Desconectado', data.status === 'online')
         if (data.meta) get('device_model').textContent = data.meta.modelId || 'Não informado'
     }
 }
-function pushMessage(direction, payload, injected) {
+function pushMessage(direction, payload, injected, source) {
     get('message-empty')?.remove()
     const messages = get('messages'), div = document.createElement('div'), time = document.createElement('span')
     div.className = `message ${direction}${injected ? ' injected' : ''}`
     div.tabIndex = 0; div.setAttribute('role', 'button')
     div.setAttribute('aria-label', `${direction === 'rx' ? 'Recebida' : 'Enviada'}: copiar para diagnóstico`)
-    time.className = 'timestamp'; time.textContent = `${new Date().toLocaleTimeString('pt-BR')} · ${direction === 'rx' ? 'Recebida' : 'Enviada'}${injected ? ' · Simulada' : ''}`
+    const origin = direction === 'rx' ? (injected ? 'Simulação de recebimento' : 'Aparelho') : injected ? 'Diagnóstico manual' : ({ha:'Home Assistant',lg:'LG ThinQ',local:'Serviço local'})[source] || 'Origem não informada'
+    const now = new Date().toLocaleTimeString('pt-BR')
+    time.className = 'timestamp'; time.textContent = `${now} · ${direction === 'rx' ? 'Recebida' : 'Enviada'} · ${origin}`
     div.append(time, document.createTextNode(payload))
+    const description = describePacket(payload)
+    if (description) {
+        const summary = document.createElement('p'); summary.textContent = description; div.append(summary)
+        const target = direction === 'rx' && !injected ? 'last-device' : direction === 'tx' && !injected && ['ha','lg'].includes(source) ? `last-${source}` : null
+        if (target) get(target).textContent = `${now} · ${description}`
+    }
     const copy = () => { get(direction === 'rx' ? 'send2' : 'send1').value = payload; document.querySelector('.monitor-advanced').open = true }
     div.onclick = copy; div.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy() } }
     messages.append(div)
@@ -55,7 +63,7 @@ function send(fromDevice) {
 }
 get('btn_send1').onclick = () => send(false)
 get('btn_send2').onclick = () => send(true)
-get('clear-messages').onclick = () => get('messages').replaceChildren()
+get('clear-messages').onclick = () => { get('messages').replaceChildren(); for(const id of ['last-ha','last-lg','last-device']) get(id).textContent='Aguardando captura…' }
 get('autoscroll').onchange = () => { if (get('autoscroll').checked) get('messages').scrollTop = get('messages').scrollHeight }
 window.addEventListener('pageshow', event => { if (event.persisted && deviceId) connect() })
 window.addEventListener('pagehide', () => { clearTimeout(reconnectTimer); if (ws) { ws.onclose = null; ws.close() } })
