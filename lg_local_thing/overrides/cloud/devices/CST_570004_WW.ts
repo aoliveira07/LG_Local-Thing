@@ -4,8 +4,14 @@ import type { DeviceDiscovery } from '../homeassistant'
 import type { FieldDefinition } from './tlv_device'
 import type { TLV } from '../../util/tlv'
 
-const fans: Record<string, number> = { '1': 1, '2': 2, '4': 4, '6': 6, auto: 8 }
+const fans: Record<string, number> = { '1': 1, '2': 2, '4': 4, '6': 6, 'Força': 7, auto: 8 }
 const core = [0x1f7, 0x1f9, 0x1fa, 0x1fd, 0x1fe]
+const airflow: Record<string, number> = {
+    'Circular': 0x205, 'Fluxo de ar indireto': 0x28e, 'Fluxo de ar direto': 0x28f,
+    'Modo Smart': 0x290, 'Modo de atualização': 0x291, 'Agitar': 0x325,
+}
+const positions = ['Padr.', '1', '2', '3', '4', '5', '6']
+const modes: Record<string, number> = {cool: 0, dry: 1, fan_only: 2, heat: 4, auto: 6}
 
 export default class Device extends RAC {
     override isValuesResponse(values: TLV[]) {
@@ -15,6 +21,7 @@ export default class Device extends RAC {
     override processTLV(values: TLV[]) {
         const hadConfig = !!this.config
         const capabilitiesChanged = values.some(({t,v}) => t >= 0x2c0 && t <= 0x2ef && this.raw_clip_state[t] !== v)
+        const newVaneFields = values.some(({t}) => [0x321, ...Object.values(airflow)].includes(t) && this.raw_clip_state[t] === undefined)
         super.processTLV(values)
         // Real captures contain five state fields, not the RAC minimum of ten.
         // Basic discovery must also work when the RAC EEPROM capability tag is absent.
@@ -24,9 +31,11 @@ export default class Device extends RAC {
             clearInterval(this.query_values_timeout)
             this.query_values_timeout = undefined
             this.valuesReceived()
-        } else if (hadConfig && capabilitiesChanged) {
+        } else if (hadConfig && (capabilitiesChanged || newVaneFields)) {
             this.initMakeSetConfig()
         }
+        // Publish compound state only after the whole response has been applied.
+        this.publishAirflow()
     }
 
     override valuesReceived() {
@@ -46,7 +55,7 @@ export default class Device extends RAC {
     }
 
     override addField(config: DeviceDiscovery, field: FieldDefinition, autoreg?: boolean) {
-        if (field.comp === 'energy_current') return
+        if (field.comp === 'energy_current' || field.id === 0x321 || field.id === 0x322) return
         if (field.id === 0x1fa) field = {
             ...field,
             read_xform: value => Object.keys(fans).find(key => fans[key] === value),
@@ -58,16 +67,64 @@ export default class Device extends RAC {
     override setConfig(config: DeviceDiscovery) {
         const climate = config.components.climate as any
         climate.fan_modes = Object.keys(fans)
-        // Standard RAC mode commands are experimental on CST until tested on hardware.
+        // Mode values confirmed by LG ThinQ commands and device responses.
         climate.modes = ['off', 'cool', 'dry', 'fan_only', 'heat', 'auto']
         climate.temp_step = 1
         delete config.components.energy_current
+        for (const key of Object.keys(climate)) if (key.startsWith('swing_')) delete climate[key]
+        if (this.raw_clip_state[0x321] !== undefined) {
+            climate.swing_modes = ['off', 'on', ...positions]
+            this.addField(config, {comp:'climate', name:'swing_mode'})
+        }
+        const available = Object.entries(airflow).filter(([,id]) => this.raw_clip_state[id] !== undefined)
+        if (available.length) {
+            config.components.airflow = {
+                platform: 'select', unique_id: '$deviceid-airflow', name: 'Fluxo de ar',
+                icon: 'mdi:air-filter', options: ['Desligado', ...available.map(([name]) => name)],
+            } as any
+            this.addField(config, {comp:'airflow', name:''})
+        }
         super.setConfig(config)
+    }
+
+    publishAirflow() {
+        if (!this.config) return
+        const active = Object.entries(airflow).find(([,id]) => this.raw_clip_state[id] === 1)
+        if (this.config.components.airflow) this.HA.publishProperty(this.id, 'airflow-', active?.[0] ?? 'Desligado')
+        const packed = this.raw_clip_state[0x321]
+        const position = positions.find((_, index) => packed === index * 0x1111)
+        if (this.fields_by_ha['climate-swing_mode']) {
+            const state = this.raw_clip_state[0x205] === 1 ? 'on' : position
+            if (state !== undefined) this.HA.publishProperty(this.id, 'climate-swing_mode', state)
+        }
+    }
+
+    writeCaptured(values: TLV[]) {
+        // LG ThinQ uses sequence byte 0. State is updated by the device response only.
+        this.send([1, 1, 2, 1, 0], values)
+    }
+
+    setAirflow(value: string) {
+        if (value === 'Desligado') {
+            for (const id of Object.values(airflow)) {
+                if (this.raw_clip_state[id] === 1) this.writeCaptured([{t:id, v:0}])
+            }
+        } else if (Object.prototype.hasOwnProperty.call(airflow, value) && this.raw_clip_state[airflow[value]] !== undefined) {
+            // Firmware handles mutual exclusion and any climate side effects.
+            this.writeCaptured([{t:airflow[value], v:1}])
+        }
     }
 
     override setProperty(prop: string, value: string) {
         const field = this.fields_by_ha[prop]
         if (!field || field.writable === false) return
+        if (prop === 'airflow-') { this.setAirflow(value); return }
+        if (prop === 'climate-swing_mode') {
+            if (value === 'on') this.setAirflow('Circular')
+            else if (value === 'off') this.setAirflow('Desligado')
+            else if (positions.includes(value)) this.writeCaptured([{t:0x321, v:positions.indexOf(value) * 0x1111}])
+            return
+        }
         if (prop === 'climate-fan_mode' && !Object.prototype.hasOwnProperty.call(fans, value)) return
         if (prop === 'climate-mode' && !['off','cool','dry','fan_only','heat','auto'].includes(value)) return
         if (prop === 'climate-power' && !['ON','OFF'].includes(value)) return
@@ -84,14 +141,22 @@ export default class Device extends RAC {
             this.send([1, 1, 2, 1, 1], [{t: 0x1f7, v: this.raw_clip_state[0x1f7]}])
             return
         }
-        const needsPowerOn = prop === 'climate-mode' && value !== 'off' && this.getPowerTLV() === 0
-        const modeCodes: Record<string, number> = {cool: 0, dry: 1, fan_only: 2, heat: 4, auto: 6}
-        if (needsPowerOn && this.getModeTLV() === modeCodes[value]) {
-            this.setProperty('climate-power', 'ON')
+        if (['climate-temperature','climate-fan_mode','climate-mode'].includes(prop)) {
+            if (prop === 'climate-mode' && value === 'off') { this.setProperty('climate-power','OFF'); return }
+            let mode = prop === 'climate-mode' ? modes[value] : this.getModeTLV()
+            let fan = prop === 'climate-fan_mode' ? fans[value] : this.raw_clip_state[0x1fa]
+            let target = prop === 'climate-temperature' ? Number(value)*2 : this.raw_clip_state[0x1fe]
+            if (![mode,fan,target].every(Number.isFinite)) return
+            if (prop === 'climate-fan_mode' && value === 'Força') {
+                if (mode !== 0 || this.getPowerTLV() !== 1) return // captured in cooling only
+                target = 36
+            }
+            const turningOn = prop === 'climate-mode' && this.getPowerTLV() === 0
+            if (turningOn && mode === this.getModeTLV()) { this.setProperty('climate-power','ON'); return }
+            this.writeCaptured([{t:0x1f9,v:mode},{t:0x1fa,v:fan},{t:0x1fe,v:target}])
+            if (turningOn) this.setProperty('climate-power','ON')
             return
         }
         super.setProperty(prop, value)
-        // A mode write alone does not turn this CST on, unlike the original RAC assumption.
-        if (needsPowerOn) this.setProperty('climate-power', 'ON')
     }
 }

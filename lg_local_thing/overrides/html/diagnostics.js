@@ -1,5 +1,5 @@
 // Smart House / ReThink GPL v2. Packet observations, not execution acknowledgements.
-function describePacket(hex) {
+function describePacket(hex, modelId) {
     if (!/^(?:[0-9a-f]{2})+$/i.test(hex)) return ''
     const b = hex.match(/../g).map(x => parseInt(x, 16))
     if (b.length < 13 || b[2] !== 4 || b[3] || b[4] || b[5] || ![0x65,0x87,0xa7].includes(b[6]) || b[7] !== 2 || ![1,4].includes(b[8]) || b[10] !== b.length-13) return ''
@@ -16,10 +16,19 @@ function describePacket(hex) {
         if(t===0x1f7)fields.push(`Estado: ${value===0?'desligado':value===1?'ligado':value}`)
         if(t===0x1f9)fields.push(`Modo: ${modes[value]??value}`)
         if(t===0x1fe)fields.push(`Ajuste: ${value/2} °C`)
-        if(t===0x1fa)fields.push(`Ventilação: ${value===8?'auto':value} (protocolo)`)
+        if(t===0x1fa)fields.push(`Ventilação: ${value===8?'auto':modelId==='CST_570004_WW'&&value===7?'Força':value} (protocolo)`)
         if(t===0x1fd)fields.push(`Temperatura informada: ${value/2} °C`)
-        if(t===0x321)fields.push(`Swing vertical: ${value} (protocolo)`)
-        if(t===0x322)fields.push(`Swing horizontal: ${value} (protocolo)`)
+        if(modelId==='CST_570004_WW') {
+            if(t===0x321) {
+                const position=[0,1,2,3,4,5,6].find(n=>value===n*0x1111)
+                fields.push(`Aletas: ${position===0?'Padr.':position!==undefined?'todas na posição '+position:'posição combinada '+value.toString(16)}`)
+            }
+            const airflow={0x205:'Circular',0x28e:'Fluxo indireto',0x28f:'Fluxo direto',0x290:'Modo Smart',0x291:'Modo de atualização',0x325:'Agitar'}
+            if(airflow[t])fields.push(`${airflow[t]}: ${value===1?'ligado':value===0?'desligado':value}`)
+        } else {
+            if(t===0x321)fields.push(`Swing vertical: ${value} (protocolo)`)
+            if(t===0x322)fields.push(`Swing horizontal: ${value} (protocolo)`)
+        }
         i+=2+length
     }
     return fields.join(' · ')

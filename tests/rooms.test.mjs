@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, rmSync, readFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -7,6 +7,9 @@ import { pathToFileURL } from 'node:url'
 import { once, EventEmitter } from 'node:events'
 
 const build = resolve(process.env.RETHINK_BUILD_DIR || 'dist')
+const identityDir = mkdtempSync(join(tmpdir(), 'lg-discovery-test-'))
+process.env.RETHINK_FRIENDLY_NAMES_FILE = join(identityDir, 'names.json')
+after(() => rmSync(identityDir, {recursive:true, force:true}))
 const moduleAt = (name) => import(pathToFileURL(join(build, name)).href)
 const { FriendlyNameStore, friendlyNames } = await moduleAt('util/friendly-names.js')
 const { HomeAssistantAreas, isIngressAddress } = await moduleAt('util/ha-areas.js')

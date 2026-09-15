@@ -1,0 +1,228 @@
+[
+  {
+    "step": 1,
+    "action": "LG ThinQ: set 22 C, cool, auto fan",
+    "tx": "01010400000065020100077e407e887f902c6a6d",
+    "rx": "000004000000a70204000c7dc17e407f902c7e887f502b1fed",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 2,
+    "action": "LG ThinQ: set 23 C, cool, auto fan",
+    "tx": "01010400000065020100077e407e887f902e4a2f",
+    "rx": "000004000000a70204000c7dc17e407f902e7e887f502b94ad",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 3,
+    "action": "LG ThinQ: minimum fan requested; app label not supplied",
+    "tx": "01010400000065020100077e407e817f902eb958",
+    "rx": "000004000000a70204000c7dc17e407f902e7e817f502b67da",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 4,
+    "action": "LG ThinQ: next fan above minimum; app label not supplied",
+    "tx": "01010400000065020100077e407e827f902e2284",
+    "rx": "000004000000a70204000c7dc17e407f902e7e827f502bfc06",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 5,
+    "action": "LG ThinQ: next fan above previous raw 2; app label not supplied",
+    "tx": "01010400000065020100077e407e847f902e051d",
+    "rx": "000004000000a70204000c7dc17e407f902e7e847f502bdb9f",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 6,
+    "action": "LG ThinQ: next fan above previous raw 4; app label not supplied",
+    "tx": "01010400000065020100077e407e867f902ee875",
+    "rx": "000004000000a70204000c7dc17e407f902e7e867f502b36f7",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 7,
+    "action": "LG ThinQ: fan Auto",
+    "tx": "01010400000065020100077e407e887f902e4a2f",
+    "rx": "000004000000a70204000c7dc17e407f902e7e887f502a848c",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 8,
+    "action": "LG ThinQ: disable Auto then select Forca",
+    "tx": "01010400000065020100077e407e877f90243f8b",
+    "rx": "000004000000a70204000c7dc17e407f90247e877f502bc641",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 9,
+    "action": "LG ThinQ: exit Forca by selecting fan Auto",
+    "tx": "01010400000065020100077e407e887f9024eb65",
+    "rx": "000004000000a70204000c7dc17e407f90247e887f502a028e",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 10,
+    "action": "LG ThinQ: change mode to Dry",
+    "tx": "01010400000065020100077e417e887f90286f49",
+    "rx": "000004000000a70204000c7dc17e417f90287e887f502ae24e",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 11,
+    "action": "LG ThinQ: change mode to Fan",
+    "tx": "01010400000065020100077e427e887f9028a1a9",
+    "rx": "000004000000a70204000c7dc17e427f90287e887f502acf0a",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 12,
+    "action": "LG ThinQ: change mode to Heat",
+    "tx": "01010400000065020100077e447e887f90282c48",
+    "rx": "000004000000a70204000c7dc17e447f90287e887f502a9582",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 13,
+    "action": "LG ThinQ: change operation mode to Auto",
+    "tx": "01010400000065020100077e467e887f9028a708",
+    "rx": "000004000000a70204000c7dc17e467f90287e887f502b43c4",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": "14a",
+    "action": "LG ThinQ: return to Cool",
+    "tx": "01010400000065020100077e407e887f9024eb65",
+    "rx": "000004000000a70204000c7dc17e407f90247e887f502b12af",
+    "ack": null
+  },
+  {
+    "step": "14b",
+    "action": "LG ThinQ: set 19 C",
+    "tx": "01010400000065020100077e407e887f9026cb27",
+    "rx": "000004000000a70204000c7dc17e407f90267e887f502b99ef",
+    "ack": null
+  },
+  {
+    "step": "14c",
+    "action": "LG ThinQ: set 20 C",
+    "tx": "01010400000065020100077e407e887f90282ae9",
+    "rx": "000004000000a70204000c7dc17e407f90287e887f502b194c",
+    "ack": null
+  },
+  {
+    "step": 15,
+    "action": "LG ThinQ: Circular (De cima para baixo)",
+    "tx": "01010400000065020100028141a4c7",
+    "rx": "000004000000a702040011c8506481418180c940a380a3c0a400a4400c4e",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 16,
+    "action": "LG ThinQ: disable Circular (De cima para baixo)",
+    "tx": "01010400000065020100028140b4e6",
+    "rx": "000004000000a702040011c8506481408180c940a380a3c0a400a440492d",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 17,
+    "action": "LG ThinQ: Fluxo de ar indireto",
+    "tx": "0101040000006502010002a3811d0f",
+    "rx": "000004000000a702040012c860222281408180c940a381a3c0a400a4409020",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 18,
+    "action": "LG ThinQ: Fluxo de ar direto",
+    "tx": "0101040000006502010002a3c155cb",
+    "rx": "000004000000a702040012c860666681408180c940a380a3c1a400a4403f51",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 19,
+    "action": "LG ThinQ: Modo Smart in airflow menu",
+    "tx": "0101040000006502010002a4011510",
+    "rx": [
+      "000004000000a702040012c860666681408180c940a380a3c0a401a440a230",
+      "000004000000a702040012c860222281408180c940a380a3c0a401a4401f71"
+    ],
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 20,
+    "action": "LG ThinQ: Modo de atualizacao in airflow menu",
+    "tx": "0101040000006502010002a4415dd4",
+    "rx": [
+      "000004000000a70204001ec860222281408180c940a380a3c0a400a4407dc17e407f90267e867f5029d77a",
+      "000004000000a702040012c860222281408180c940a380a3c0a400a4413860"
+    ],
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 21,
+    "action": "LG ThinQ: Agitar in airflow menu",
+    "tx": "0101040000006502010002c94120a2",
+    "rx": [
+      "000004000000a702040012c860222281408180c941a380a3c0a400a441d343",
+      "000004000000a702040012c860222281408180c941a380a3c0a400a440c362"
+    ],
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 22,
+    "action": "LG ThinQ: airflow Automatica Desligado after Agitar",
+    "tx": "0101040000006502010002c9403083",
+    "rx": "000004000000a702040012c860222281408180c940a380a3c0a400a4402841",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 23,
+    "action": "LG ThinQ: Todos > Padr. vane position",
+    "tx": "0101040000006502010002c84003b2",
+    "rx": "000004000000a702040010c84081408180c940a380a3c0a400a4404c2f",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 24,
+    "action": "LG ThinQ: Todos, one down arrow after Padr.",
+    "tx": "0101040000006502010004c860444450c1",
+    "rx": "000004000000a702040012c860444481408180c940a380a3c0a400a44043b0",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 25,
+    "action": "LG ThinQ: Todos, second down arrow after Padr.",
+    "tx": "0101040000006502010004c86055556293",
+    "rx": "000004000000a702040012c860555581408180c940a380a3c0a400a44028e8",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 26,
+    "action": "LG ThinQ: Todos, third down arrow after Padr.",
+    "tx": "0101040000006502010004c86066663465",
+    "rx": "000004000000a702040012c860666681408180c940a380a3c0a400a4409500",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 27,
+    "action": "LG ThinQ: Todos, another down arrow from position 6",
+    "tx": "0101040000006502010004c8601111abdb",
+    "rx": "000004000000a702040012c860111181408180c940a380a3c0a400a44095a9",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 28,
+    "action": "LG ThinQ: Todos, down arrow from position 1",
+    "tx": "0101040000006502010004c8602222fd2d",
+    "rx": "000004000000a702040012c860222281408180c940a380a3c0a400a4402841",
+    "ack": "0201040000008701100000ec3c"
+  },
+  {
+    "step": 29,
+    "action": "LG ThinQ: Todos, down arrow from position 2",
+    "tx": "0101040000006502010004c8603333cf7f",
+    "rx": "000004000000a702040012c860333381408180c940a380a3c0a400a4404319",
+    "ack": "0201040000008701100000ec3c"
+  }
+]

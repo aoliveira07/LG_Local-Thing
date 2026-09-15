@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0 — Comandos CST baseados nas capturas LG
+
+- Ventilação Força (7), com temperatura de 18 °C em refrigeração.
+- Comandos de modo, ventilação e temperatura no formato capturado no LG ThinQ.
+- Posições coletivas das aletas Padr./1–6 e Circular pelo campo correto do CST.
+- Entidade Fluxo de ar com os seis modos automáticos observados.
+- Removida a interpretação RAC de oscilação horizontal/vertical neste modelo.
+- Monitor interpreta aletas coletivas, Força e fluxos CST.
+- Testes com 31 pares de referência de comandos/respostas, incluindo CRC.
+- Sem controle individual das aletas. Validação física final pelo HA pendente.
+
 ## 1.3.0 — Diagnóstico com origem HA / LG
 
 - Monitor distingue HA, LG ThinQ, diagnóstico manual e serviço local.

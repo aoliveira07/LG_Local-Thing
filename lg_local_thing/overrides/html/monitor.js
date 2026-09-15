@@ -39,7 +39,7 @@ function pushMessage(direction, payload, injected, source) {
     const now = new Date().toLocaleTimeString('pt-BR')
     time.className = 'timestamp'; time.textContent = `${now} · ${direction === 'rx' ? 'Recebida' : 'Enviada'} · ${origin}`
     div.append(time, document.createTextNode(payload))
-    const description = describePacket(payload)
+    const description = describePacket(payload, get('device_model').textContent)
     if (description) {
         const summary = document.createElement('p'); summary.textContent = description; div.append(summary)
         const target = direction === 'rx' && !injected ? 'last-device' : direction === 'tx' && !injected && ['ha','lg'].includes(source) ? `last-${source}` : null

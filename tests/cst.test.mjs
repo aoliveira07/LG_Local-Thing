@@ -26,7 +26,7 @@ function last(thinq){const b=thinq.outbox.at(-1);assert.equal(crc(b.subarray(2,-
 test('CST real corrected fan captures initialize discovery without RAC capability response',()=>{
  const {dev,ha,thinq}=setup();try{
  for(const [fan,h] of Object.entries(captured)){const b=Buffer.from(h,'hex');assert.equal(crc(b.subarray(2,-2)),b.readUInt16BE(b.length-2));thinq.emit('data',b);assert.equal(ha.properties['climate-fan_mode'],fan);assert.equal(ha.properties['climate-temperature'],20)}
- assert.deepEqual(ha.config.components.climate.fan_modes,['1','2','4','6','auto']);assert.equal(dev.query_caps_timeout,undefined)
+ assert.deepEqual(ha.config.components.climate.fan_modes,['1','2','4','6','Força','auto']);assert.equal(dev.query_caps_timeout,undefined)
  thinq.emit('data',Buffer.from('000004000000a70204000c7dc17e407f902c7e887f50282f8e','hex'));assert.equal(ha.properties['climate-temperature'],22)
  thinq.emit('data',Buffer.from('000004000000a70204000c7dc07e407f90287e887f5028f166','hex'));assert.equal(ha.properties['climate-mode'],'off')
  assert.equal(ha.config.components.climate.swing_modes,undefined);assert.equal(ha.config.components.energy_current,undefined)
@@ -49,9 +49,7 @@ test('optional controls require advertised capabilities; late capabilities keep 
  // Synthetic capabilities exercise inherited protocol paths, not hardware validation.
  dev.processTLV([{t:0x2cd,v:15},{t:0x2cc,v:3},{t:0x2d3,v:5}])
  assert.equal(ha.config.components.climate.unique_id,id)
- assert(ha.config.components.climate.swing_modes.length);assert(ha.config.components.climate.swing_horizontal_modes.length)
- for(const mode of ha.config.components.climate.swing_modes){dev.setProperty('climate-swing_mode',mode);assert(last(thinq).has(0x321))}
- for(const mode of ha.config.components.climate.swing_horizontal_modes){dev.setProperty('climate-swing_horizontal_mode',mode);assert(last(thinq).has(0x322))}
+ assert.equal(ha.config.components.climate.swing_modes,undefined);assert.equal(ha.config.components.climate.swing_horizontal_modes,undefined)
  for(const [name,tag] of [['sleeptimer',0x21a],['starttimer',0x21c],['stoptimer',0x21b]]){assert(ha.config.components[name]);dev.setProperty(name+'-','1');assert.equal(last(thinq).get(tag),60)}
  assert(ha.config.components.airclean);assert(ha.config.components.jet);assert(ha.config.components.energysave)
  for(const [name,tag] of [['airclean',0x20f],['jet',0x323],['energysave',0x20d]]){for(const value of ['ON','OFF']){dev.setProperty(name+'-',value);assert.equal(last(thinq).get(tag),value==='ON'?1:0)}}

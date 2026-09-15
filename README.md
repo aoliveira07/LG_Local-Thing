@@ -3,7 +3,44 @@
 Home Assistant Add-on Repository mantido por **Smart House**, derivado do
 [ReThink](https://github.com/anszom/rethink).
 
-## Versão 1.3.0 — comparação de comandos HA / LG
+## Versão 1.4.0 — comandos CST capturados pelo LG ThinQ
+
+O AMNW24GTBA0 (`CST_570004_WW`) recebe comandos baseados na sessão de capturas
+do aplicativo LG de 15/09/2026. Os demais modelos mantêm seus drivers.
+
+- Ligar/desligar mantém o comando dedicado de alimentação já testado no aparelho.
+- Modos: refrigerar, desumidificar, ventilar, aquecer e automático.
+- Ventilação: **1, 2, 4, 6, Força e auto**. Força é aceito em refrigeração com
+  o aparelho ligado e solicita **18 °C**, conforme o comando capturado.
+- Aletas em conjunto: **Padr. e posições 1–6**, além de Circular ligado/desligado.
+  Não são criados controles individuais nem oscilação horizontal para este modelo.
+- Uma nova entidade **Fluxo de ar** oferece Desligado, Circular, Fluxo de ar
+  indireto, Fluxo de ar direto, Modo Smart, Modo de atualização e Agitar,
+  conforme os campos informados pelo aparelho. Ela usa
+  [MQTT Select](https://www.home-assistant.io/integrations/select.mqtt/).
+- O monitor interpreta os campos de aletas e fluxo conforme o modelo CST.
+
+O estado publicado aguarda a resposta do aparelho. O firmware pode alterar
+temperatura e ventilação ao ativar um fluxo: na captura de Modo de atualização,
+ele passou de 20 °C/auto para 19 °C/6. Essa alteração não é imposta pelo driver.
+Ao trocar de modo pelo HA, é mantida a temperatura atual; a memória de temperatura
+por modo do aplicativo LG não é reproduzida.
+
+A faixa de 18–30 °C é herdada; as capturas cobrem 18, 19, 20, 22 e 23 °C.
+Recursos opcionais herdados, como Jet e temporizadores, não fazem parte desta
+validação. Desligar Circular e Agitar foi capturado; desligar os demais fluxos
+usa o valor zero do respectivo campo e ainda requer conferência física.
+
+Após atualizar o add-on, os novos controles aparecem no dispositivo MQTT quando
+o aparelho informa os campos correspondentes. Os identificadores existentes
+são preservados. Não é necessário cadastrar novamente o aparelho no ThinQ.
+
+Os testes reproduzem os **31 comandos de referência byte a byte**, incluindo
+CRC, e verificam as respostas capturadas. Isso valida a geração dos pacotes;
+a versão atualizada ainda deve ser conferida no equipamento pelo HA.
+Veja [escopo e testes da 1.4.0](docs/TESTING-1.4.0.md).
+
+## Comparação de comandos HA / LG
 
 O monitor identifica **Home Assistant**, **LG ThinQ**, **Diagnóstico manual** e
 **Serviço local** como origens das mensagens enviadas. As recebidas mostram
@@ -42,43 +79,6 @@ Ele permite testes sem registrar comandos arbitrários no driver. O botão
 uma ativação futura pode exigir novo cadastro e sua confirmação. Sair da conta
 encerra as conexões LG. Não compartilhe credenciais, URLs de retorno do login,
 certificados ou arquivos de estado.
-
-Build e 14 testes direcionados passaram, além dos testes de navegador desktop
-e celular. A conexão real com LG não foi exercitada no ambiente de desenvolvimento.
-
-## Suporte experimental AMNW24GTBA0
-
-A 1.2.1 corrige o acionamento pelo HA com o comando dedicado de ligar,
-confirmado fisicamente pelo usuário. Ao mudar de desligado para um modo ativo,
-o driver envia explicitamente esse comando; a confirmação visual aguarda o
-estado devolvido pelo aparelho. Outros modos e recursos extras seguem experimentais.
-
-O modelo `CST_570004_WW` agora possui um driver próprio baseado no RAC do
-ReThink. A ventilação oferece **1, 2, 4, 6 e auto**, conforme as capturas com
-o controle AKB75735404 / PWLSSB21H. Os demais modelos mantêm seus drivers.
-
-Inclui comandos de ligar/desligar, temperatura (18–30 °C, faixa herdada do RAC)
-e modos refrigerar, desumidificar, ventilar, aquecer e automático. Somente a
-leitura em refrigeração, liga/desliga, ajustes de 20/22 °C e as velocidades
-informadas foi verificada nas capturas reais. Faixa, demais modos e os demais
-comandos enviados pelo HA ainda precisam de validação no equipamento.
-
-Swing vertical/horizontal, Jet, purificação, economia e temporizadores usam
-os comandos do driver original e aparecem quando o aparelho anuncia as
-capacidades correspondentes. Não são habilitados apenas pela presença de um
-botão no controle. Ângulo individual das aletas, Air Flow, iluminação e outras
-funções sem mapeamento comprovado não receberam comandos inventados.
-
-Após atualizar, abra o painel, confirme o nome do aparelho e confira a entidade
-de climatização na integração MQTT. Se permanecer sem entidade, altere uma vez
-a temperatura pelo controle correto para produzir o pacote completo de estado.
-Teste primeiro desligar/ligar, depois 20/22 °C e as cinco opções de ventilação.
-Confira a resposta física e o estado devolvido antes de testar os modos extras.
-O nome e os IDs existentes são preservados.
-
-Build do aplicativo e 36 testes direcionados passaram. Os testes dos comandos
-usam simulação; o build Docker e os testes físicos serão feitos ao atualizar
-no Home Assistant. Esta versão é experimental para o CST.
 
 ## Painel, monitoramento e cômodos
 
